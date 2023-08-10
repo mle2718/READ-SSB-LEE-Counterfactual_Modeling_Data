@@ -1,0 +1,65 @@
+
+2.  Within Sector trades of ACE
+	Chad should have this ready by spring?
+
+3.  Resolving how to merge prices
+	Monkfish and other 'minimally processed things'
+	Linked data or computed prices
+
+4.  Cost data -- tammy can provide some info?
+
+5.  Discard rates and daily "holdings": Geret has this, or at least knows how to construct this. He's working on it for Yellowtail flounder, but the methods should be the same for all stocks. If I understand it correctly, the assumed discard rates are calculated weekly.
+
+6. Does every MRI get a PSC? YES
+6a. MRI-PERMIT_NUMBER-date that are not-unique.
+	13,000 trips with double matches.
+
+	Some MRIs with no PSC are 'fishing'.  Landing groundfish?
+	
+	Permits (mris) with no PSC that are landing groundfish? What is that?
+		Probably open access fishing.  May be groundfish.
+		Double check if there is 
+
+
+
+
+
+7. Stock areas for non-groundfish?
+
+
+
+
+8. What about stuff that isn't managed under one of these management plans (e.g., sharks, Jonah crab, whelks, striped bass)? These typically account for <1% of the veslog_S data, but I know some are constraining species (e.g., halibut) or may be commercially valuable (e.g., tuna). Given how large our choice set will already be with all the other species, I'm looking for ways to simplify this other stuff into a small number of categories. Things that matter would be high value vs. low value, target species vs. bycatch, strictly constraining species, and frequency of occurrence (e.g., maybe turtles can be safely dropped from the analysis). Do you have recommendations on how to categorize these "leftover" species or a resource that could help me do so?
+
+	Summer Flounder http://spo.nmfs.noaa.gov/tm/TMSPO111.pdf
+	Northern Shrimp
+	Menhaden -- omega protein (any landings?)
+
+
+
+
+
+9.  Managed species had geographically delineated quotas/different stocks fell under different management plans
+
+
+
+What are the choice margins that will be modeled? What is less important?  
+
+
+How is the opportunity cost of fishing in groundfish changing over time
+	How does this change WRT regulatory changes?
+
+
+
+10. What does exit look like in the data?
+	1. MRIs going into CPH
+
+11. Entry exit in general (Thunberg)?
+	A.  Thunberg & Corrieia Mar. Pol  http://www.mass.gov/eea/docs/dfg/dmf/publications/fleet-diversity-paper.pdf
+	B.  Groundfish reports
+
+12. Changes from year to year from common pool to sectors
+
+13. Send along raster maps for groundfish. 
+
+
