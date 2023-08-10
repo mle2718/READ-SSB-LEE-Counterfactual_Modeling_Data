@@ -3,7 +3,7 @@
 
 clear;
 odbc load, exec("select vp.ap_year, vp.ap_num, vp.vp_num, vp.plan, vp.cat, vp.start_date, vp.end_date, vp.date_expired, vp.date_canceled from vps_fishery_ner vp where 
-	ap_year>=1996
+	ap_year between 1996 and $lastyr
     order by vp_num, ap_num;") $oracle_cxn;
     destring, replace;
     renvars, lower;
@@ -49,13 +49,13 @@ saveold $my_workdir/vps_fishery_raw_$today_date_string.dta, replace version(12);
 
 
 
-forvalues j=1996(1)2016{;
+forvalues j=1996(1)$lastyr{;
 	gen a`j'=0;
 	local k=`j'+1;
 	replace a`j'=1 if start_date<mdy(5,1,`k') & myde>=mdy(5,1,`j');
 };
 
-collapse (sum) a1996-a2016, by(vp_num plan cat);
+collapse (sum) a1996-a$lastyr, by(vp_num plan cat);
 foreach var of varlist a*{;
 	replace `var'=1 if `var'>=1;
 };
@@ -88,7 +88,7 @@ saveold $my_workdir/permit_working_$today_date_string.dta, replace version(12);
 clear;
 odbc load, exec("select ap_year, ap_num, vp_num, hull_id, ves_name, strt1, strt2, city, st, zip1, zip2, tel, hport, hpst, pport, ppst, len, crew, gtons, 
 ntons, vhp, blt, hold, toc,top, date_issued, date_canceled, max_trap_limit
-from vps_vessel where ap_year>=1996;") $oracle_cxn;
+from vps_vessel where ap_year between 1996 and $lastyr;") $oracle_cxn;
     destring, replace;
     renvars, lower;
     gen mys=dofc(date_issued);
@@ -102,7 +102,7 @@ format date* %td;
 tempfile permit_working;
 save `permit_working', replace;
 
-forvalues j=1996(1)2016{;
+forvalues j=1996(1)$lastyr{;
 	tempfile new;
 	local NEWfiles `"`NEWfiles'"`new'" "'  ;
 

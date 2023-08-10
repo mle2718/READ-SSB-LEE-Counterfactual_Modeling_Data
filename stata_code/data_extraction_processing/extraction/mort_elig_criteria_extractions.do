@@ -123,7 +123,7 @@ saveold $my_workdir/mqrs_old_$today_date_string.dta, replace version(12);
 drop remark* vessel hull;
 dups, drop terse;
 drop _expand;
-forvalues j=2000(1)2016{;
+forvalues j=2000(1)$lastyr{;
 	gen a`j'=0;
 	local k=`j'+1;
 	replace a`j'=1 if dofc(date_eligible)<mdy(5,1,`k') & dofc(date_cancelled)>=mdy(5,1,`j');

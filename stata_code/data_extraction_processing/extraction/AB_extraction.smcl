@@ -1,15 +1,11 @@
 {smcl}
 {com}{sf}{ul off}{txt}{.-}
       name:  {res}<unnamed>
-       {txt}log:  {res}/home/mlee/Documents/projects/Birkenbach/MAM_code_folder/MAM/AB_extraction.smcl
+       {txt}log:  {res}C:\Users\Min-Yang.Lee\Documents\MAM2\MAM_code_folder\MAM\AB_extraction.smcl
   {txt}log type:  {res}smcl
- {txt}opened on:  {res}18 Jan 2017, 10:03:23
+ {txt}opened on:  {res} 9 Aug 2023, 11:43:55
 {txt}
 {com}. timer on 1;
-{txt}
-{com}. quietly do "/home/mlee/Documents/Workspace/technical folder/do file scraps/odbc_connection_macros.do";
-{txt}
-{com}. global oracle_cxn "conn("$mysole_conn") lower";
 {txt}
 {com}. local date: display %td_CCYY_NN_DD date(c(current_date), "DMY");
 {res}{txt}
@@ -21,20 +17,1212 @@
 {txt}
 {com}. global secondyr =$firstyr+1;
 {txt}
-{com}. global lastyr 2016;
+{com}. global lastyr 2022;
 {txt}
-{com}. global firstders 2003;
+{com}. global firstders 1997;
 {txt}
+{com}. do "construct_owners.do";
+{txt}
+{com}. 
+. /* Min-Yang.Lee@noaa.gov */
+. 
+. /* Objective: This code is used to extract hull_id, business, id, and person_ids
+> */
+. 
+. 
+. 
+. /* PRELIMINARIES */
+. /* Set up folders and oracle connection*/
+. 
+. version 15.1
+{txt}
+{com}. pause off
+{txt}
+{com}. #delimit ;
+{txt}delimiter now ;
+{com}. /***************************************************
+> 1.  Construct Affiliates
+> ***************************************************/
+> /* Port of chad's sas code to get ownership data.*/
+> /* Objective: Construct a key-file which contains VP_NUM, Affiliate_id, and ap_year.
+> The Affiliation variable is "constant" for all VP_NUMS which have the exact same person_id's associated with it.
+> Note: The affiliate_id number that is associated with an entity may change when this code is re-run and data are extracted again.  Caveat emptor.
+> Note2: There are some VP_NUM's that have revenue but no ownership information. These VP_NUMS are assigned an affiliate_id number in step 3.
+> */
+> 
+> /* Min-Yang's comment: This code is slightly modified from Chad's SQL code.  It joins data from three tables (vps_owner, vps_fisher_ner, and business_owner)*/
+> 
+> clear;
+{txt}
+{com}. odbc load,  exec("select distinct(b.person_id), b.business_name, c.business_id, a.vp_num, a.ap_year, ves.hull_id
+>         from permit.vps_owner@garfo_nefsc c, client.bus_own@garfo_nefsc b, permit.vps_fishery_ner@garfo_nefsc a, permit.vps_vessel ves
+>                 where c.ap_num in (select max(ap_num) as ap_num from permit.vps_fishery_ner@garfo_nefsc where ap_year between $firstyr and $lastyr group by vp_num, ap_year)
+>          and c.business_id=b.business_id and a.ap_num=c.ap_num and a.ap_num=ves.ap_num;") $mysole_conn;
+{txt}
+{com}.          display "check1";
+{res}check1
+{txt}
+{com}. /*there's a single vp_num that has two owners for the same ap_num. I'm dropping 1 of them */
+> drop if vp_num==240095 & business_id==788 & ap_year==2017;
+{txt}(2 observations deleted)
+
+{com}. /* important to use bysort vp_num ap_year (person_id) to consistently order the person-id's within the groups defined by vp_num and ap_year*/
+> /* this just generates a numeric 'suffix' for the person_id variable.  For a given VP_NUM and YEAR, the lowest person_id has the lowest jid.
+> This is not important for now, but will be used in the next step when arraying person ids.*/
+> bysort vp_num ap_year (person_id ): gen jid=_n;
+{txt}
+{com}. /* reshape the data to wide --- array out the person ids.  Sort the data by person_id1.  For entries with the same person_id1, sort by person_id2. Etc.  */
+> 
+> reshape wide person_id , i(vp_num ap_year) j(jid);
+{txt}(j = 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31)
+
+Data{col 36}Long{col 43}->{col 48}Wide
+{hline 77}
+Number of observations     {res}      87,413   {txt}->   {res}63,078      
+{txt}Number of variables        {res}           7   {txt}->   {res}36          
+{txt}j variable (31 values)              {res}jid   {txt}->   (dropped)
+xij variables:
+                              {res}person_id   {txt}->   {res}person_id1 person_id2 ... person_id31
+{txt}{hline 77}
+
+{com}. sort person_id*;
+{txt}
+{com}. /* Generate affiliate_id variable: Observations which have the same value for affiliate_id have the same distinch pattern of person_ids.
+> egen group() constructs a new variable taking on values 1,2,3,...., for each distinct combination of the person_id variables. The missing option allows for a missing value to be matched.  */
+> replace person_id1=99000000+vp_num if person_id1==.;
+{txt}(172 real changes made)
+
+{com}. assert person_id1<.;
+{txt}
+{com}. egen affiliate_id=group(person_id*), missing;
+{res}{txt}
+{com}. order affiliate_id ap_year vp_num;
+{txt}
+{com}. sort affiliate_id ap_year vp_num;
+{txt}
+{com}. sort affiliate vp_num ap_year;
+{txt}
+{com}. /* it should be impossible for a vp_num to have 2 affiliate_id's in a year.  Check this and break the program if there are vp_nums with 2 affiliated_ids. */
+> duplicates tag vp_num affiliate_id ap_year, gen(mytt9);
+
+{p 0 4}{txt}Duplicates in terms of {res} vp_num affiliate_id ap_year{p_end}
+{txt}
+{com}. assert mytt9==0;
+{txt}
+{com}. drop mytt9;
+{txt}
+{com}. /* rename ap_year as year and vp_num as permit to facilitate joining to dealer data*/
+> rename vp_num permit;
+{res}{txt}
+{com}. order hull_id business_id business_name;
+{txt}
+{com}. save "${c -(}my_workdir{c )-}/ownership2_${c -(}today_date_string{c )-}.dta", replace;
+{txt}{p 0 4 2}
+file {bf}
+C:/Users/Min-Yang.Lee/Documents/MAM2/data_folder/ownership2_2023_08_09.dta{rm}
+saved
+{p_end}
+
+{com}. #delimit;
+{txt}delimiter now ;
+{com}.  clear;
+{txt}
+{com}. odbc load,  exec("select pids.*, ves.hull_id from permit.owner_history_pids pids, permit.vps_vessel ves
+>      where  pids.ap_num in (select max(ap_num) as ap_num from permit.owner_history_pids group by permit, ap_year) 
+>          and pids.ap_num=ves.ap_num;") $mysole_conn;
+{txt}
+{com}. destring , replace;
+{txt}permit: all characters numeric; {res}replaced {txt}as {res}long
+{txt}owner: contains nonnumeric characters; no {res}replace
+{txt}year: all characters numeric; {res}replaced {txt}as {res}int
+{txt}ap_year already numeric; no {res}replace
+{txt}person_id already numeric; no {res}replace
+{txt}name_last: contains nonnumeric characters; no {res}replace
+{txt}name_middle: contains nonnumeric characters; no {res}replace
+{txt}name_first: contains nonnumeric characters; no {res}replace
+{txt}name_suffix: contains nonnumeric characters; no {res}replace
+{txt}ap_num already numeric; no {res}replace
+{txt}hull_id: contains nonnumeric characters; no {res}replace
+{txt}
+{com}. drop if ap_year==.;
+{txt}(3,818 observations deleted)
+
+{com}. drop if ap_year<=2003;
+{txt}(20,259 observations deleted)
+
+{com}. bysort permit ap_year (person_id ): gen jid=_n;
+{txt}
+{com}. drop ap_num;
+{txt}
+{com}. reshape wide person_id name_last name_middle name_first name_suffix owner, i(permit ap_year hull_id) j(jid);
+{txt}(j = 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15)
+
+Data{col 36}Long{col 43}->{col 48}Wide
+{hline 77}
+Number of observations     {res}      11,850   {txt}->   {res}9,206       
+{txt}Number of variables        {res}          11   {txt}->   {res}94          
+{txt}j variable (15 values)              {res}jid   {txt}->   (dropped)
+xij variables:
+                              {res}person_id   {txt}->   {res}person_id1 person_id2 ... person_id15
+                              name_last   {txt}->   {res}name_last1 name_last2 ... name_last15
+                            name_middle   {txt}->   {res}name_middle1 name_middle2 ... name_middle15
+                             name_first   {txt}->   {res}name_first1 name_first2 ... name_first15
+                            name_suffix   {txt}->   {res}name_suffix1 name_suffix2 ... name_suffix15
+                                  owner   {txt}->   {res}owner1 owner2 ... owner15
+{txt}{hline 77}
+
+{com}. rename owner1 owner;
+{res}{txt}
+{com}. drop owner?;
+{txt}
+{com}. drop owner??;
+{txt}
+{com}. save "${c -(}my_workdir{c )-}/ownership1_${c -(}today_date_string{c )-}.dta", replace;
+{txt}{p 0 4 2}
+file {bf}
+C:/Users/Min-Yang.Lee/Documents/MAM2/data_folder/ownership1_2023_08_09.dta{rm}
+saved
+{p_end}
+
+{com}. clear;
+{txt}
+{com}. odbc load,  exec("select business_id, business_name, person_id, name_first, name_middle, name_last from client.bus_own@garfo_nefsc;") $mysole_conn;
+{txt}
+{com}. destring, replace;
+{txt}business_id already numeric; no {res}replace
+{txt}business_name: contains nonnumeric characters; no {res}replace
+{txt}person_id already numeric; no {res}replace
+{txt}name_first: contains nonnumeric characters; no {res}replace
+{txt}name_middle: contains nonnumeric characters; no {res}replace
+{txt}name_last: contains nonnumeric characters; no {res}replace
+{txt}
+{com}. save "${c -(}my_workdir{c )-}/names_${c -(}today_date_string{c )-}.dta", replace;
+{txt}{p 0 4 2}
+file {bf}
+C:/Users/Min-Yang.Lee/Documents/MAM2/data_folder/names_2023_08_09.dta{rm}
+saved
+{p_end}
+
+{com}. 
+{txt}end of do-file
+
+{com}. do "scallop_mri.do";
+{txt}
+{com}. /* THIS BIT OF CODE IS USED TO EXTRACT VESSEL PERMITS*/
+. #delimit;
+{txt}delimiter now ;
+{com}. clear;
+{txt}
+{com}.         odbc load,  exec("select * from mlee.IFQ_MRI;") $oracle_cxn;
+{txt}
+{com}.   gen das_ifq=1;
+{txt}
+{com}. tempfile dual;
+{txt}
+{com}. rename mri right_id;
+{res}{txt}
+{com}. save `dual', replace;
+{txt}{p 0 4 2}
+(file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000001.tmp{rm}
+not found)
+{p_end}
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000001.tmp{rm}
+saved
+as .dta format
+{p_end}
+
+{com}.  clear;
+{txt}
+{com}. odbc load,  exec("select right_id, hull_id, vessel, date_eligible, date_cancelled, auth_type, fishery from mqrs.mort_elig_criteria mq  
+> where fishery in ('SCALLOP','GENERAL CATEGORY SCALLOP') AND date_eligible is not null 
+> AND (date_cancelled>=to_date('05/01/2000','MM/DD/YYYY') or date_cancelled is null) 
+> AND ((date_cancelled > date_eligible) or date_cancelled is null);") $oracle_cxn;
+{txt}
+{com}.       destring, replace;
+{txt}right_id already numeric; no {res}replace
+{txt}hull_id: contains nonnumeric characters; no {res}replace
+{txt}vessel: contains nonnumeric characters; no {res}replace
+{txt}date_eligible already numeric; no {res}replace
+{txt}date_cancelled already numeric; no {res}replace
+{txt}auth_type: contains nonnumeric characters; no {res}replace
+{txt}fishery: contains nonnumeric characters; no {res}replace
+{txt}
+{com}.     renvars, lower;
+{txt}no renames necessary
+
+{com}.         merge m:1 right_id using `dual';
+{res}
+{txt}{col 5}Result{col 33}Number of obs
+{col 5}{hline 41}
+{col 5}Not matched{col 30}{res}           3,289
+{txt}{col 9}from master{col 30}{res}           3,289{txt}  (_merge==1)
+{col 9}from using{col 30}{res}               0{txt}  (_merge==2)
+
+{col 5}Matched{col 30}{res}              69{txt}  (_merge==3)
+{col 5}{hline 41}
+
+{com}.         keep if _merge==3;
+{txt}(3,289 observations deleted)
+
+{com}.         drop _merge;
+{txt}
+{com}.         sort right_id date_eligible date_cancelled;
+{txt}
+{com}.                         saveold $my_workdir/dual_scallops_$today_date_string, version(12) replace;
+{txt}{p 0 1 2}
+(saving in Stata 12 format, which can be read
+by Stata 11 or 12)
+{p_end}
+{p 0 4 2}
+file {bf}
+C:/Users/Min-Yang.Lee/Documents/MAM2/data_folder/dual_scallops_2023_08_09.dta{rm}
+saved
+{p_end}
+
+{com}. /*I want to make a dataset that contains the VP_NUM, FY, PLANS_CATS that were active in a FY */
+> 
+> /* I'll make a set of dummies that is 
+> 1 if the permit start_date was before the end of the fishing year AND the permit end_date was after the beginning of the fishing year
+> */
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> /*
+> 
+> forvalues j=1996(1)2016{c -(};
+>         gen a`j'=0;
+>         local k=`j'+1;
+>         replace a`j'=1 if start_date<mdy(5,1,`k') & myde>=mdy(5,1,`j');
+> {c )-};
+> 
+> collapse (sum) a1996-a2016, by(vp_num plan cat);
+> foreach var of varlist a*{c -(};
+>         replace `var'=1 if `var'>=1;
+> {c )-};
+> reshape long a, i(vp_num plan cat) j(fishing_year);
+> 
+> replace a=1 if a>=1;
+> drop if a==0;
+> 
+> /*save permits, replace; */
+> gen plancat=plan + "_" + cat;
+> drop plan cat;
+> reshape wide a, i(vp_num fishing_year) j(plancat) string;
+> 
+> foreach var of varlist a*{c -(};
+>         replace `var'=0 if `var'==.;
+>         {c )-};
+> renvars a*, predrop(1);
+> 
+> rename vp_num permit;
+> qui compress;
+> notes: made by "permit_characteristics_extractions.do";
+> saveold $my_workdir/permit_working_$today_date_string.dta, replace version(12);
+> 
+> 
+> 
+> 
+> /* THIS BIT OF CODE IS USED TO EXTRACT VESSEL Characteristics*/
+> 
+> 
+> clear;
+> odbc load, exec("select ap_year, ap_num, vp_num, hull_id, ves_name, strt1, strt2, city, st, zip1, zip2, tel, hport, hpst, pport, ppst, len, crew, gtons, 
+> ntons, vhp, blt, hold, toc,top, date_issued, date_canceled, max_trap_limit
+> from vps_vessel where ap_year>=1996;") $oracle_cxn;
+>     destring, replace;
+>     renvars, lower;
+>     gen mys=dofc(date_issued);
+>     gen myend=dofc(date_canceled);
+> drop date_issued date_canceled;
+> 
+> rename mys date_issued;
+> rename myend date_canceled;
+> format date* %td;
+> 
+> tempfile permit_working;
+> save `permit_working', replace;
+> 
+> forvalues j=1996(1)2016{c -(};
+>         tempfile new;
+>         local NEWfiles `"`NEWfiles'"`new'" "'  ;
+> 
+>         use `permit_working', clear;
+>         gen a`j'=0;
+>         local k=`j'+1;
+>         replace a`j'=1 if date_issued<mdy(5,1,`k') & date_canceled>=mdy(5,1,`j');
+>         bysort vp_num a`j' (ap_num): replace a`j'=0 if _n<_N;
+>         keep if a`j'==1;
+>         keep vp_num-top max_trap_limit;
+>         gen fishing_year=`j';
+>         save `new';
+>         clear;
+> {c )-};
+> 
+> append using `NEWfiles';
+> 
+> 
+> 
+> rename vp_num permit;
+> 
+> 
+> 
+> /* This bit joins them */
+> 
+> merge 1:1 permit fishing_year using $my_workdir/permit_working_$today_date_string;
+> saveold $my_workdir/permit_portfolio_$today_date_string, version(12) replace;
+> 
+> 
+> keep hull_id fishing_year max_trap_limit;
+> 
+> saveold $my_workdir/lobster_traps_$today_date_string, version(12) replace;
+> 
+> 
+> 
+> */
+> 
+> 
+> 
+
+{txt}end of do-file
+
+{com}. do "permit_characteristics_extractions.do";
+{txt}
+{com}. /* THIS BIT OF CODE IS USED TO EXTRACT VESSEL PERMITS*/
+. #delimit;
+{txt}delimiter now ;
+{com}. clear;
+{txt}
+{com}. odbc load, exec("select vp.ap_year, vp.ap_num, vp.vp_num, vp.plan, vp.cat, vp.start_date, vp.end_date, vp.date_expired, vp.date_canceled from vps_fishery_ner vp where 
+>         ap_year between 1996 and $lastyr
+>     order by vp_num, ap_num;") $oracle_cxn;
+{txt}
+{com}.     destring, replace;
+{txt}ap_year already numeric; no {res}replace
+{txt}ap_num already numeric; no {res}replace
+{txt}vp_num already numeric; no {res}replace
+{txt}plan: contains nonnumeric characters; no {res}replace
+{txt}cat: contains nonnumeric characters; no {res}replace
+{txt}start_date already numeric; no {res}replace
+{txt}end_date already numeric; no {res}replace
+{txt}date_expired already numeric; no {res}replace
+{txt}date_canceled already numeric; no {res}replace
+{txt}
+{com}.     renvars, lower;
+{txt}no renames necessary
+
+{com}.         gen mys=dofc(start_date);
+{txt}(149 missing values generated)
+
+{com}.     gen myend=dofc(end_date);
+{txt}(13 missing values generated)
+
+{com}.     gen myexp=dofc(date_expired);
+{txt}(224 missing values generated)
+
+{com}.     gen mycanc=dofc(date_canceled);
+{txt}(896,811 missing values generated)
+
+{com}.     format my* %td;
+{txt}
+{com}. drop start_date end_date date_expired date_canceled;
+{txt}
+{com}. rename mys start_date;
+{res}{txt}
+{com}. rename myend end_date;
+{res}{txt}
+{com}. rename myexp date_expired;
+{res}{txt}
+{com}. rename mycanc date_canceled;
+{res}{txt}
+{com}. gen  myde=min(end_date, date_expired, date_canceled);
+{txt}(10 missing values generated)
+
+{com}. format myde %td;
+{txt}
+{com}. drop if start_date>=myde | start_date>=myde;
+{txt}(60,380 observations deleted)
+
+{com}. saveold $my_workdir/vps_fishery_raw_$today_date_string.dta, replace version(12);
+{txt}{p 0 1 2}
+(saving in Stata 12 format, which can be read
+by Stata 11 or 12)
+{p_end}
+{p 0 4 2}
+file {bf}
+C:/Users/Min-Yang.Lee/Documents/MAM2/data_folder/vps_fishery_raw_2023_08_09.dta{rm}
+saved
+{p_end}
+
+{com}. /*I want to make a dataset that contains the VP_NUM, FY, PLANS_CATS that were active in a FY */
+> 
+> /* I'll make a set of dummies that is 
+> 1 if the permit start_date was before the end of the fishing year AND the permit end_date was after the beginning of the fishing year
+> */
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> forvalues j=1996(1)$lastyr{c -(};
+{txt}  2{com}.         gen a`j'=0;
+{txt}  3{com}.         local k=`j'+1;
+{txt}  4{com}.         replace a`j'=1 if start_date<mdy(5,1,`k') & myde>=mdy(5,1,`j');
+{txt}  5{com}. {c )-};
+{txt}(46,052 real changes made)
+(50,235 real changes made)
+(24,041 real changes made)
+(58,464 real changes made)
+(82,928 real changes made)
+(61,413 real changes made)
+(59,997 real changes made)
+(74,416 real changes made)
+(57,154 real changes made)
+(68,940 real changes made)
+(57,145 real changes made)
+(58,216 real changes made)
+(60,003 real changes made)
+(53,855 real changes made)
+(47,130 real changes made)
+(47,471 real changes made)
+(43,053 real changes made)
+(40,941 real changes made)
+(40,717 real changes made)
+(39,191 real changes made)
+(39,659 real changes made)
+(38,810 real changes made)
+(38,521 real changes made)
+(38,296 real changes made)
+(38,936 real changes made)
+(38,846 real changes made)
+(35,967 real changes made)
+
+{com}. collapse (sum) a1996-a$lastyr, by(vp_num plan cat);
+{res}{txt}
+{com}. foreach var of varlist a*{c -(};
+{txt}  2{com}.         replace `var'=1 if `var'>=1;
+{txt}  3{com}. {c )-};
+{txt}(14,132 real changes made)
+(19,607 real changes made)
+(2,693 real changes made)
+(17,800 real changes made)
+(26,306 real changes made)
+(17,247 real changes made)
+(13,879 real changes made)
+(23,193 real changes made)
+(8,352 real changes made)
+(14,575 real changes made)
+(7,596 real changes made)
+(7,744 real changes made)
+(12,932 real changes made)
+(8,556 real changes made)
+(5,513 real changes made)
+(7,317 real changes made)
+(5,464 real changes made)
+(4,554 real changes made)
+(4,844 real changes made)
+(4,503 real changes made)
+(4,656 real changes made)
+(4,233 real changes made)
+(3,817 real changes made)
+(3,892 real changes made)
+(4,112 real changes made)
+(3,692 real changes made)
+(1,911 real changes made)
+
+{com}. reshape long a, i(vp_num plan cat) j(fishing_year);
+{txt}(j = 1996 1997 1998 1999 2000 2001 2002 2003 2004 2005 2006 2007 2008 2009 2010 2011 2012 2013 2014 2015 2016 2017 2018 2019 2020 2021 2022)
+
+Data{col 36}Wide{col 43}->{col 48}Long
+{hline 77}
+Number of observations     {res}     146,683   {txt}->   {res}3,960,441   
+{txt}Number of variables        {res}          30   {txt}->   {res}5           
+{txt}j variable (27 values)                    ->   {res}fishing_year
+{txt}xij variables:
+                  {res}a1996 a1997 ... a2022   {txt}->   {res}a
+{txt}{hline 77}
+
+{com}. replace a=1 if a>=1;
+{txt}(0 real changes made)
+
+{com}. drop if a==0;
+{txt}(2,954,661 observations deleted)
+
+{com}. /*save permits, replace; */
+> gen plancat=plan + "_" + cat;
+{txt}
+{com}. drop plan cat;
+{txt}
+{com}. reshape wide a, i(vp_num fishing_year) j(plancat) string;
+{txt}(j = BLU_1 BLU_2 BSB_1 BSB_2 DOG_1 FLS_1 FLS_2 HER_1 HER_2 HER_3 HMS_1 HRG_A HRG_B HRG_C HRG_D HRG_E LGC_A LGC_B LGC_C LOI_A23 LOI_A3 LOI_A4 LOI_A5 LOT_A23 LOT_A3 LOT_A4 LOT_A5 LO_1 LO_2 LO_A1 LO_A2 LO_A23 LO_A3 LO_A4 LO_A5 LO_A5W LO_A6 LO_AOC MNK_A MNK_B MNK_C MNK_D MNK_E MNK_F MNK_H MUL_1 MUL_2 MUL_3 MUL_4 MUL_5 MUL_6 MUL_7 MUL_8 MUL_A MUL_B MUL_C MUL_D MUL_E MUL_F MUL_G MUL_H MUL_HA MUL_HB MUL_I MUL_J MUL_K NFO_1 OQ_6 OQ_7 RCB_A RCB_B RCB_C SCG_1 SCP_1 SCP_2 SC_2 SC_3 SC_4 SC_5 SC_6 SC_7 SC_8 SC_9 SF_1 SG_1A SG_1B SKT_1 SMB_1 SMB_1A SMB_1B SMB_1C SMB_2 SMB_3 SMB_4 SMB_5 SMB_6 SMB_T1 SMB_T2 SMB_T3 TLF_1 TLF_2 TLF_3 TLF_A TLF_B TLF_C TLF_D)
+
+Data{col 36}Long{col 43}->{col 48}Wide
+{hline 77}
+Number of observations     {res}   1,005,780   {txt}->   {res}144,367     
+{txt}Number of variables        {res}           4   {txt}->   {res}108         
+{txt}j variable (106 values)         {res}plancat   {txt}->   (dropped)
+xij variables:
+                                      {res}a   {txt}->   {res}aBLU_1 aBLU_2 ... aTLF_D
+{txt}{hline 77}
+
+{com}. foreach var of varlist a*{c -(};
+{txt}  2{com}.         replace `var'=0 if `var'==.;
+{txt}  3{com}.         {c )-};
+{txt}(79,326 real changes made)
+(124,324 real changes made)
+(122,998 real changes made)
+(124,619 real changes made)
+(79,441 real changes made)
+(120,055 real changes made)
+(122,785 real changes made)
+(143,392 real changes made)
+(127,517 real changes made)
+(144,362 real changes made)
+(143,500 real changes made)
+(143,714 real changes made)
+(144,302 real changes made)
+(143,593 real changes made)
+(112,718 real changes made)
+(143,895 real changes made)
+(140,293 real changes made)
+(142,587 real changes made)
+(140,547 real changes made)
+(144,201 real changes made)
+(144,151 real changes made)
+(144,243 real changes made)
+(144,299 real changes made)
+(143,956 real changes made)
+(143,710 real changes made)
+(144,102 real changes made)
+(144,196 real changes made)
+(109,087 real changes made)
+(143,593 real changes made)
+(101,300 real changes made)
+(135,625 real changes made)
+(139,115 real changes made)
+(139,715 real changes made)
+(142,239 real changes made)
+(143,246 real changes made)
+(143,917 real changes made)
+(143,103 real changes made)
+(141,451 real changes made)
+(143,931 real changes made)
+(143,390 real changes made)
+(136,906 real changes made)
+(137,122 real changes made)
+(100,334 real changes made)
+(144,180 real changes made)
+(144,235 real changes made)
+(144,179 real changes made)
+(143,901 real changes made)
+(143,683 real changes made)
+(144,255 real changes made)
+(144,319 real changes made)
+(144,015 real changes made)
+(142,984 real changes made)
+(143,341 real changes made)
+(125,883 real changes made)
+(134,421 real changes made)
+(144,042 real changes made)
+(141,798 real changes made)
+(143,090 real changes made)
+(143,891 real changes made)
+(144,083 real changes made)
+(131,894 real changes made)
+(142,028 real changes made)
+(123,223 real changes made)
+(125,947 real changes made)
+(137,275 real changes made)
+(122,390 real changes made)
+(144,347 real changes made)
+(114,895 real changes made)
+(143,291 real changes made)
+(113,698 real changes made)
+(144,278 real changes made)
+(144,345 real changes made)
+(120,894 real changes made)
+(123,476 real changes made)
+(125,855 real changes made)
+(137,772 real changes made)
+(144,217 real changes made)
+(144,327 real changes made)
+(143,198 real changes made)
+(143,661 real changes made)
+(143,969 real changes made)
+(144,193 real changes made)
+(144,200 real changes made)
+(114,125 real changes made)
+(137,545 real changes made)
+(140,733 real changes made)
+(99,483 real changes made)
+(133,167 real changes made)
+(143,164 real changes made)
+(144,109 real changes made)
+(144,250 real changes made)
+(124,629 real changes made)
+(95,873 real changes made)
+(87,645 real changes made)
+(142,360 real changes made)
+(142,910 real changes made)
+(143,988 real changes made)
+(144,083 real changes made)
+(143,415 real changes made)
+(116,827 real changes made)
+(137,393 real changes made)
+(142,252 real changes made)
+(144,336 real changes made)
+(144,330 real changes made)
+(144,156 real changes made)
+(125,776 real changes made)
+
+{com}. renvars a*, predrop(1);
+{txt}
+{com}. rename vp_num permit;
+{res}{txt}
+{com}. qui compress;
+{txt}
+{com}. notes: made by "permit_characteristics_extractions.do";
+{res}{txt}
+{com}. saveold $my_workdir/permit_working_$today_date_string.dta, replace version(12);
+{txt}{p 0 1 2}
+(saving in Stata 12 format, which can be read
+by Stata 11 or 12)
+{p_end}
+{p 0 4 2}
+file {bf}
+C:/Users/Min-Yang.Lee/Documents/MAM2/data_folder/permit_working_2023_08_09.dta{rm}
+saved
+{p_end}
+
+{com}. /* THIS BIT OF CODE IS USED TO EXTRACT VESSEL Characteristics*/
+> 
+> 
+> clear;
+{txt}
+{com}. odbc load, exec("select ap_year, ap_num, vp_num, hull_id, ves_name, strt1, strt2, city, st, zip1, zip2, tel, hport, hpst, pport, ppst, len, crew, gtons, 
+> ntons, vhp, blt, hold, toc,top, date_issued, date_canceled, max_trap_limit
+> from vps_vessel where ap_year between 1996 and $lastyr;") $oracle_cxn;
+{txt}
+{com}.     destring, replace;
+{txt}ap_year already numeric; no {res}replace
+{txt}ap_num already numeric; no {res}replace
+{txt}vp_num already numeric; no {res}replace
+{txt}hull_id: contains nonnumeric characters; no {res}replace
+{txt}ves_name: contains nonnumeric characters; no {res}replace
+{txt}strt1: contains nonnumeric characters; no {res}replace
+{txt}strt2: contains nonnumeric characters; no {res}replace
+{txt}city: contains nonnumeric characters; no {res}replace
+{txt}st: contains nonnumeric characters; no {res}replace
+{txt}zip1: contains nonnumeric characters; no {res}replace
+{txt}zip2: contains nonnumeric characters; no {res}replace
+{txt}tel: all characters numeric; {res}replaced {txt}as {res}double
+{txt}(744 missing values generated)
+{res}{txt}hport: contains nonnumeric characters; no {res}replace
+{txt}hpst: contains nonnumeric characters; no {res}replace
+{txt}pport: contains nonnumeric characters; no {res}replace
+{txt}ppst: contains nonnumeric characters; no {res}replace
+{txt}len already numeric; no {res}replace
+{txt}crew already numeric; no {res}replace
+{txt}gtons already numeric; no {res}replace
+{txt}ntons already numeric; no {res}replace
+{txt}vhp already numeric; no {res}replace
+{txt}blt already numeric; no {res}replace
+{txt}hold already numeric; no {res}replace
+{txt}toc already numeric; no {res}replace
+{txt}top already numeric; no {res}replace
+{txt}date_issued already numeric; no {res}replace
+{txt}date_canceled already numeric; no {res}replace
+{txt}max_trap_limit already numeric; no {res}replace
+{txt}
+{com}.     renvars, lower;
+{txt}no renames necessary
+
+{com}.     gen mys=dofc(date_issued);
+{txt}
+{com}.     gen myend=dofc(date_canceled);
+{txt}(6,778 missing values generated)
+
+{com}. drop date_issued date_canceled;
+{txt}
+{com}. rename mys date_issued;
+{res}{txt}
+{com}. rename myend date_canceled;
+{res}{txt}
+{com}. format date* %td;
+{txt}
+{com}. tempfile permit_working;
+{txt}
+{com}. save `permit_working', replace;
+{txt}{p 0 4 2}
+(file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000001.tmp{rm}
+not found)
+{p_end}
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000001.tmp{rm}
+saved
+as .dta format
+{p_end}
+
+{com}. forvalues j=1996(1)$lastyr{c -(};
+{txt}  2{com}.         tempfile new;
+{txt}  3{com}.         local NEWfiles `"`NEWfiles'"`new'" "'  ;
+{txt}  4{com}.         use `permit_working', clear;
+{txt}  5{com}.         gen a`j'=0;
+{txt}  6{com}.         local k=`j'+1;
+{txt}  7{com}.         replace a`j'=1 if date_issued<mdy(5,1,`k') & date_canceled>=mdy(5,1,`j');
+{txt}  8{com}.         bysort vp_num a`j' (ap_num): replace a`j'=0 if _n<_N;
+{txt}  9{com}.         keep if a`j'==1;
+{txt} 10{com}.         keep vp_num-top max_trap_limit;
+{txt} 11{com}.         gen fishing_year=`j';
+{txt} 12{com}.         save `new';
+{txt} 13{com}.         clear;
+{txt} 14{com}. {c )-};
+{txt}(31,167 real changes made)
+(9633 real changes made)
+(191,451 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000002.tmp{rm}
+saved
+as .dta format
+{p_end}
+(33,694 real changes made)
+(12459 real changes made)
+(191,750 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000003.tmp{rm}
+saved
+as .dta format
+{p_end}
+(11,897 real changes made)
+(5643 real changes made)
+(206,731 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000004.tmp{rm}
+saved
+as .dta format
+{p_end}
+(17,561 real changes made)
+(11006 real changes made)
+(206,430 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000005.tmp{rm}
+saved
+as .dta format
+{p_end}
+(19,396 real changes made)
+(12152 real changes made)
+(205,741 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000006.tmp{rm}
+saved
+as .dta format
+{p_end}
+(16,038 real changes made)
+(8352 real changes made)
+(205,299 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000007.tmp{rm}
+saved
+as .dta format
+{p_end}
+(15,404 real changes made)
+(7264 real changes made)
+(204,845 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000008.tmp{rm}
+saved
+as .dta format
+{p_end}
+(17,806 real changes made)
+(9453 real changes made)
+(204,632 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000009.tmp{rm}
+saved
+as .dta format
+{p_end}
+(15,696 real changes made)
+(6972 real changes made)
+(204,261 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_00000a.tmp{rm}
+saved
+as .dta format
+{p_end}
+(16,220 real changes made)
+(7147 real changes made)
+(203,912 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_00000b.tmp{rm}
+saved
+as .dta format
+{p_end}
+(15,706 real changes made)
+(6476 real changes made)
+(203,755 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_00000c.tmp{rm}
+saved
+as .dta format
+{p_end}
+(15,624 real changes made)
+(6398 real changes made)
+(203,759 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_00000d.tmp{rm}
+saved
+as .dta format
+{p_end}
+(15,630 real changes made)
+(6452 real changes made)
+(203,807 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_00000e.tmp{rm}
+saved
+as .dta format
+{p_end}
+(15,353 real changes made)
+(6071 real changes made)
+(203,703 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_00000f.tmp{rm}
+saved
+as .dta format
+{p_end}
+(14,241 real changes made)
+(4936 real changes made)
+(203,680 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_00000g.tmp{rm}
+saved
+as .dta format
+{p_end}
+(15,176 real changes made)
+(5893 real changes made)
+(203,702 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_00000h.tmp{rm}
+saved
+as .dta format
+{p_end}
+(14,550 real changes made)
+(5292 real changes made)
+(203,727 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_00000i.tmp{rm}
+saved
+as .dta format
+{p_end}
+(14,220 real changes made)
+(4949 real changes made)
+(203,714 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_00000j.tmp{rm}
+saved
+as .dta format
+{p_end}
+(14,028 real changes made)
+(4736 real changes made)
+(203,693 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_00000k.tmp{rm}
+saved
+as .dta format
+{p_end}
+(14,447 real changes made)
+(5124 real changes made)
+(203,662 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_00000l.tmp{rm}
+saved
+as .dta format
+{p_end}
+(14,308 real changes made)
+(4914 real changes made)
+(203,591 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_00000m.tmp{rm}
+saved
+as .dta format
+{p_end}
+(14,177 real changes made)
+(4699 real changes made)
+(203,507 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_00000n.tmp{rm}
+saved
+as .dta format
+{p_end}
+(14,308 real changes made)
+(4742 real changes made)
+(203,419 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_00000o.tmp{rm}
+saved
+as .dta format
+{p_end}
+(14,115 real changes made)
+(4448 real changes made)
+(203,318 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_00000p.tmp{rm}
+saved
+as .dta format
+{p_end}
+(15,196 real changes made)
+(4976 real changes made)
+(202,765 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_00000q.tmp{rm}
+saved
+as .dta format
+{p_end}
+(15,375 real changes made)
+(4659 real changes made)
+(202,269 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_00000r.tmp{rm}
+saved
+as .dta format
+{p_end}
+(12,646 real changes made)
+(1509 real changes made)
+(201,848 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_00000s.tmp{rm}
+saved
+as .dta format
+{p_end}
+
+{com}. append using `NEWfiles';
+{txt}
+{com}. rename vp_num permit;
+{res}{txt}
+{com}. /* This bit joins them */
+> 
+> merge 1:1 permit fishing_year using $my_workdir/permit_working_$today_date_string;
+{res}
+{txt}{col 5}Result{col 33}Number of obs
+{col 5}{hline 41}
+{col 5}Not matched{col 30}{res}         123,281
+{txt}{col 9}from master{col 30}{res}         123,269{txt}  (_merge==1)
+{col 9}from using{col 30}{res}              12{txt}  (_merge==2)
+
+{col 5}Matched{col 30}{res}         144,355{txt}  (_merge==3)
+{col 5}{hline 41}
+
+{com}. saveold $my_workdir/permit_portfolio_$today_date_string, version(12) replace;
+{txt}{p 0 1 2}
+(saving in Stata 12 format, which can be read
+by Stata 11 or 12)
+{p_end}
+{p 0 4 2}
+file {bf}
+C:/Users/Min-Yang.Lee/Documents/MAM2/data_folder/permit_portfolio_2023_08_09.dta{rm}
+saved
+{p_end}
+
+{com}. keep hull_id fishing_year max_trap_limit;
+{txt}
+{com}. saveold $my_workdir/lobster_traps_$today_date_string, version(12) replace;
+{txt}{p 0 1 2}
+(saving in Stata 12 format, which can be read
+by Stata 11 or 12)
+{p_end}
+{p 0 4 2}
+file {bf}
+C:/Users/Min-Yang.Lee/Documents/MAM2/data_folder/lobster_traps_2023_08_09.dta{rm}
+saved
+{p_end}
+
+{com}. 
+{txt}end of do-file
+
+{com}. do "cfdbs_data_dump.do";
+{txt}
+{com}. #delimit;
+{txt}delimiter now ;
+{com}. clear;
+{txt}
+{com}. quietly forvalues yr=$firstders/$lastyr{c -(};
+{txt}
+{com}. append using  `dsp1';
+{txt}{p 0 7 2}
+(variable
+{bf:species_itis} was {bf:str6}, now {bf:str7} to accommodate using data's values)
+{p_end}
+
+{com}.         destring, replace;
+{txt}landings already numeric; no {res}replace
+{txt}live already numeric; no {res}replace
+{txt}value already numeric; no {res}replace
+{txt}port: all characters numeric; {res}replaced {txt}as {res}long
+{txt}year: all characters numeric; {res}replaced {txt}as {res}int
+{txt}month: all characters numeric; {res}replaced {txt}as {res}byte
+{txt}day: all characters numeric; {res}replaced {txt}as {res}byte
+{txt}nespp4: all characters numeric; {res}replaced {txt}as {res}int
+{txt}species_itis: all characters numeric; {res}replaced {txt}as {res}long
+{txt}(74 missing values generated)
+{res}{txt}grade_code: all characters numeric; {res}replaced {txt}as {res}byte
+{txt}(20 missing values generated)
+{res}{txt}market_code: contains nonnumeric characters; no {res}replace
+{txt}
+{com}.         compress;
+  {txt}variable {bf}{res}landings{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}long{sf}
+  {txt}variable {bf}{res}live{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}long{sf}
+  {txt}variable {bf}{res}value{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}long{sf}
+{txt}  (88,033,908 bytes saved)
+
+{com}.         renvarlab, lower;
+{txt}No renames necessary: all new names match old names
+
+{com}. gen date=mdy(month, day, year);
+{txt}(104,911 missing values generated)
+
+{com}. format date %td;
+{txt}
+{com}. compress;
+  {txt}variable {bf}{res}date{sf}{txt} was {bf}{res}float{sf}{txt} now {bf}{res}int{sf}
+{txt}  (14,672,318 bytes saved)
+
+{com}. saveold $my_workdir/cfdbs_$today_date_string.dta, replace version(12);
+{txt}{p 0 1 2}
+(saving in Stata 12 format, which can be read
+by Stata 11 or 12)
+{p_end}
+{p 0 4 2}
+file {bf}
+C:/Users/Min-Yang.Lee/Documents/MAM2/data_folder/cfdbs_2023_08_09.dta{rm}
+saved
+{p_end}
+
+{com}. 
+{txt}end of do-file
+
+{com}. do "declaration_codes.do";
+{txt}
+{com}. 
+. #delimit;
+{txt}delimiter now ;
+{com}. clear;
+{txt}
+{com}. odbc load,  exec("select * from das.das_allocation_rules where fishing_year between 2004 and 2005;") $oracle_cxn;
+{txt}
+{com}.   rename fishery_code activity_code;
+{res}{txt}
+{com}. rename user_entered ue;
+{res}{txt}
+{com}. rename date_entered de;
+{res}{txt}
+{com}. rename user_c uc;
+{res}{txt}
+{com}. rename date_changed dc;
+{res}{txt}
+{com}. rename remarks activity_description;
+{res}{txt}
+{com}. save $my_workdir/das_activity_codes.dta, replace ;
+{txt}{p 0 4 2}
+file {bf}
+C:/Users/Min-Yang.Lee/Documents/MAM2/data_folder/das_activity_codes.dta{rm}
+saved
+{p_end}
+
+{com}. /*AMS -- 2007 to Present */
+> clear;
+{txt}
+{com}. odbc load,  exec("select * from ams.das_activity_codes;") $oracle_cxn;
+{txt}
+{com}.   rename description activity_description;
+{res}{txt}
+{com}. rename das_type das_category;
+{res}{txt}
+{com}. save $my_workdir/ams_activity_codes.dta, replace ;
+{txt}{p 0 4 2}
+file {bf}
+C:/Users/Min-Yang.Lee/Documents/MAM2/data_folder/ams_activity_codes.dta{rm}
+saved
+{p_end}
+
+{com}. clear;
+{txt}
+{com}. odbc load,  exec("select * from das2.valid_activity_code;") $oracle_cxn;
+{txt}
+{com}.   save $my_workdir/das2_activity_codes.dta, replace ;
+{txt}{p 0 4 2}
+file {bf}
+C:/Users/Min-Yang.Lee/Documents/MAM2/data_folder/das2_activity_codes.dta{rm}
+saved
+{p_end}
+
+{com}. 
+{txt}end of do-file
+
 {com}. do "das_allocations_used.do";
 {txt}
-{com}. /*
+{com}. 
+. 
+. /*
 > 
-> The 2004-2008 time period is all done.
->          DAS2.ALLOCATION_USE stores
->                 A.  trips 
->                 B.  leases.  
->         DAS2.private_transaction_use stores
->                 C. Trips that used leased DAS.  
+>         DAS (2004/5)
+>         DAS2 (2006-8)
+>         AMS (2009-2017)
 > 
 > 
 > 
@@ -48,53 +1236,301 @@
 >                 AMS.lease_exch_applic
 >  */
 . 
-. 
-. 
 . #delimit;
 {txt}delimiter now ;
+{com}. *quietly do "/home/mlee/Documents/Workspace/technical folder/do file scraps/odbc_connection_macros.do";
+. *global oracle_cxn "conn("$mysole_conn") lower";
+. local date: display %td_CCYY_NN_DD date(c(current_date), "DMY");
+{res}{txt}
+{com}. global today_date_string = subinstr(trim("`date'"), " " , "_", .);
+{txt}
 {com}. clear;
 {txt}
-{com}. /*DAS2.allocation_use
+{com}. tempfile das2_usage das1_usage reg_use2006 das2a initial;
+{txt}
+{com}. clear;
+{txt}
+{com}. /* DAS schema data*/
+> /* usage */
+> 
+> odbc load,  exec("select du.fishing_year, du.das_transaction_id, du.permit_number, du.das_charged_days, tr.sailing_port, tr.sailing_state, tr.sail_date_time as date_sail, tr.landing_port, tr.landing_state, tr.landing_date_time as date_land,
+>                 tr.gillnet_vessel, tr.day_trip, tr.observer_onboard, tr.das_charged_fixed, tr.fishery_code, tr.vessel_name              
+>         from das.das_used du, das.trips tr where du.das_transaction_id=tr.das_transaction_id and du.permit_number=tr.permit_number and du.das_category='A' and du.fishery='MUL';") $oracle_cxn;
+{txt}
+{com}.         keep if inlist(fishing_year, 2004, 2005);
+{txt}(15,268 observations deleted)
+
+{com}. rename permit permit;
+{res}{txt}
+{com}. rename das_charged_days charge;
+{res}{txt}
+{com}. rename fishery_code activity_code;
+{res}{txt}
+{com}. collapse (sum) charge (first) gillnet_vessel day_trip observer_onboard das_charged_fixed vessel_name , by(fishing_year permit sailing_port sailing_state date_sail landing_port landing_state date_land activity_code );
+{res}{txt}
+{com}. gen schema="DAS";
+{txt}
+{com}. save `das1_usage',replace;
+{txt}{p 0 4 2}
+(file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000002.tmp{rm}
+not found)
+{p_end}
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000002.tmp{rm}
+saved
+as .dta format
+{p_end}
+
+{com}. clear;
+{txt}
+{com}. /*DAS2 schema DAS2.allocation_use
 >  A. Trips */
-> odbc load,  exec("select * from das2.allocation_use where category_name='A' and plan='MUL' and fishing_year between 2004 and 2008;") $oracle_cxn;
+> odbc load,  exec(" select du.das_trip_id, du.allocation_use_type, du.au_date_time_debited, du.permit_debited, du.permit_credited, du.quantity, du.category_name, du.plan, du.right_id, du.credit_type, 
+> du.fishing_year, du.dollar_value, activity_code, dt.permit_num, dt.sailing_port, dt.sailing_state, dt.trip_start, dt.trip_end, dt.landing_port, dt.landing_state
+>  from das2.allocation_use du, das2.das_trip dt
+>  where du.category_name='A' and du.plan='MUL' and du.allocation_use_type='TRIP' and du.quantity<>0
+>  and du.das_trip_id=dt.das_trip_id;") $oracle_cxn;
 {txt}
-{com}.   tempfile t1 reg_use2004;
-{txt}
-{com}.   save `t1';
-{txt}file /tmp/St21496.000001 saved
+{com}.   keep if fishing_year>=2006 & fishing_year<=2008;
+{txt}(381 observations deleted)
 
+{com}. tempfile t1 reg_use2006;
+{txt}
+{com}.   rename permit_debited permit_seller;
+{res}{txt}
+{com}. rename right_id right_id_seller;
+{res}{txt}
+{com}. rename permit_credited permit_buyer;
+{res}{txt}
 {com}. keep if allocation_use_type=="TRIP";
-{txt}(3,159 observations deleted)
+{txt}(0 observations deleted)
 
-{com}. gen date_charged=dofc(au_date_time);
+{com}. notes: This has ONLY TRIPS. This has no PTU in it.;
+{res}{txt}
+{com}. save `reg_use2006', replace;
+{txt}{p 0 4 2}
+(file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000007.tmp{rm}
+not found)
+{p_end}
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000007.tmp{rm}
+saved
+as .dta format
+{p_end}
+
+{com}. /*DAS2.private_transaction_use
+> C. Trips that used leased DAS */
+> clear;
 {txt}
-{com}. format date_charged %td;
+{com}. odbc load,  exec("select du.das_trip_id, du.allocation_use_type, du.au_date_time_debited, du.pt_permit_debited, du.permit_debited, du.quantity, du.category_name, du.plan, du.right_id, du.credit_type, 
+> du.fishing_year, activity_code, dt.permit_num, dt.sailing_port, dt.sailing_state, dt.trip_start, dt.trip_end, dt.landing_port, dt.landing_state
+>  from das2.private_transaction_use du, das2.das_trip dt
+>  where du.category_name='A' and du.plan='MUL'  and du.quantity<>0
+>  and du.das_trip_id=dt.das_trip_id;") $oracle_cxn;
 {txt}
-{com}. collapse (sum) quantity, by(date_charged permit_debited right_id fishing_year);
+{com}.   /*
+> 
+> *odbc load,  exec("select * from das2.private_transaction_use where plan='MUL' and category_name='A' and allocation_use_type='LEASE' ;") $oracle_cxn;  
+> rename permit_debited permit_seller;
+> rename right_id right_id_seller;
+> rename pt_permit_debited permit_buyer;
+> gen date_of_trade=dofc(au_date_time);
+> format date_of_trade %td;
+> 
+> /*fillin the right id of the buyer */
+> /* there's a couple of mis-matches.  some are date based*/
+> replace date_of_trade=mdy(11,5,2007) if permit_seller==230105 & permit_buyer==230222 & date_of_trade==mdy(11,6,2007) ;
+> merge m:1 date_of_trade permit_seller permit_buyer right_id_seller using `das2_leases';
+> replace right_id_buyer=760 if right_id_seller==711 & permit_seller==320311 & permit_buyer==330236 & fishing_year==2008;
+> drop if _merge==2;
+> keep quantity-date_of_trade right_id_buyer;
+> drop uc dc date_allocated;
+> gen date_charged=dofc(ptu_date);
+> format date_charged %td;
+> 
+> */
+> 
+> keep if fishing_year>=2006 & fishing_year<=2008;
+{txt}(174 observations deleted)
+
+{com}. append using `reg_use2006';
+{txt}{p 0 7 2}
+(variable
+{bf:landing_port} was {bf:str26}, now {bf:str31} to accommodate using data's values)
+{p_end}
+
+{com}. rename permit_num permit;
+{res}{txt}
+{com}. rename quantity charge;
+{res}{txt}
+{com}. rename trip_start date_sail;
+{res}{txt}
+{com}. rename trip_end date_land;
+{res}{txt}
+{com}. drop plan category;
 {txt}
-{com}. order date_charged fishing_year;
+{com}. collapse (sum) charge, by (au_date_time_debited permit_debited permit right_id fishing_year activity_code sailing_port sailing_state date_sail date_land landing_port landing_state);
+{res}{txt}
+{com}. gen schema="DAS2";
 {txt}
-{com}. sort date_charged fishing_year;
+{com}. save `das2_usage', replace;
+{txt}{p 0 4 2}
+(file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000001.tmp{rm}
+not found)
+{p_end}
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000001.tmp{rm}
+saved
+as .dta format
+{p_end}
+
+{com}. clear;
 {txt}
-{com}. save `reg_use2004', replace;
-{txt}(note: file /tmp/St21496.000002 not found)
-file /tmp/St21496.000002 saved
+{com}. odbc load,  exec("select * from AMS.TRIP_AND_CHARGE where fmp='MULT' and DAS_TYPE='A-DAYS' and charge<>0 and fishing_year>=2009;") $oracle_cxn;
+{txt}
+{com}.   drop running_clock observer rsa mult_override fmp trip_de-charge_uc trip_source fishing_area das_type das_id trip_id tc_id charge_type;
+{txt}
+{com}.  rename permit_nbr permit;
+{res}{txt}
+{com}. destring, replace;
+{txt}permit already numeric; no {res}replace
+{txt}activity_code: contains nonnumeric characters; no {res}replace
+{txt}date_sail already numeric; no {res}replace
+{txt}date_land already numeric; no {res}replace
+{txt}fishing_year already numeric; no {res}replace
+{txt}charge already numeric; no {res}replace
+{txt}
+{com}. compress;
+  {txt}variable {bf}{res}permit{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}long{sf}
+  {txt}variable {bf}{res}fishing_year{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
+{txt}  (1,214,860 bytes saved)
+
+{com}. notes: charge is denominated in days. There is one entry that is negative. I don't think it's a data error. ;
+{res}{txt}
+{com}.  collapse (sum) charge, by(permit date_s date_l fishing activity_code);
+{res}{txt}
+{com}.  gen schema="AMS";
+{txt}
+{com}. append using `das2_usage';
+{txt}{p 0 7 2}
+(variable
+{bf:fishing_year} was {bf:int}, now {bf:double} to accommodate using data's values)
+{p_end}
+{p 0 7 2}
+(variable
+{bf:permit} was {bf:long}, now {bf:double} to accommodate using data's values)
+{p_end}
+{p 0 7 2}
+(variable
+{bf:schema} was {bf:str3}, now {bf:str4} to accommodate using data's values)
+{p_end}
+
+{com}. append using `das1_usage';
+{txt}
+{com}. notes: the schema column lets me know where the data came from.  Not all fields were collected in all three schema. ;
+{res}{txt}
+{com}. notes: Permit, charge, fishing_year, date_sail, date_land, fishing_year and activity_code are in all;
+{res}{txt}
+{com}. notes: sailing port, state, landings port state, gillnet, and observer were only databased in AMS.;
+{res}{txt}
+{com}. notes: DAS2 contains right_ids, but DAS and AMS do not.;
+{res}{txt}
+{com}.  compress;
+  {txt}variable {bf}{res}permit{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}long{sf}
+  {txt}variable {bf}{res}fishing_year{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
+  {txt}variable {bf}{res}permit_debited{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}long{sf}
+  {txt}variable {bf}{res}right_id{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
+{txt}  (4,817,180 bytes saved)
+
+{com}. replace date_land=mdyhms(9,25,2008,15,21,0) if year(dofc(date_land))>=3008;
+{txt}(1 real change made)
+
+{com}. save $my_workdir/das_usage_$today_date_string.dta, replace ;
+{txt}{p 0 4 2}
+file {bf}
+C:/Users/Min-Yang.Lee/Documents/MAM2/data_folder/das_usage_2023_08_09.dta{rm}
+saved
+{p_end}
+
+{com}. clear;
+{txt}
+{com}. /* DAS schema data*/
+> 
+> /* leases */
+> odbc load, exec("select * from das.das_transfer_lease where fishery='MUL' and das_category='A' and TRANSACTION_TYPE='L' order by nmfs_approval_date desc;") $oracle_cxn;
+{txt}
+{com}. keep if inlist(fishing_year, 2004, 2005);
+{txt}(227 observations deleted)
+
+{com}. rename grantor_right_to_days_id right_id_seller;
+{res}{txt}
+{com}. rename grantee_right_to_days_id right_id_buyer;
+{res}{txt}
+{com}. rename grantor_permit_number permit_seller;
+{res}{txt}
+{com}. rename grantee_permit_number permit_buyer;
+{res}{txt}
+{com}. drop user_changed date_changed user_entered transaction_type;
+{txt}
+{com}.  replace nmfs_approval_date=dofc(nmfs_approval_date);
+{txt}(575 real changes made)
+
+{com}. replace date_entered=dofc(date_entered);
+{txt}(575 real changes made)
+
+{com}. format nmfs_approval_date date_entered %td;
+{txt}
+{com}. rename das_leased quantity;
+{res}{txt}
+{com}. rename das_price dollar_value;
+{res}{txt}
+{com}. rename nmfs_approval date_of_trade;
+{res}{txt}
+{com}. drop fishery date_entered das_category;
+{txt}
+{com}. compress;
+  {txt}variable {bf}{res}transfer_id{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
+  {txt}variable {bf}{res}fishing_year{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
+  {txt}variable {bf}{res}permit_buyer{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}long{sf}
+  {txt}variable {bf}{res}right_id_buyer{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
+  {txt}variable {bf}{res}permit_seller{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}long{sf}
+  {txt}variable {bf}{res}right_id_seller{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
+  {txt}variable {bf}{res}date_of_trade{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
+{txt}  (21,850 bytes saved)
+
+{com}. tempfile dl1;
+{txt}
+{com}. gen schema="DAS";
+{txt}
+{com}. save `dl1';
+{txt}{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000008.tmp{rm}
+saved
+as .dta format
+{p_end}
 
 {com}. /*DAS2.allocation_use
 >  B. LEASES*/
-> 
-> 
-> use `t1', clear;
+> clear;
 {txt}
-{com}. keep if allocation_use_type=="LEASE" & approval_status=="APPROVED";
-{txt}(52,960 observations deleted)
+{com}. odbc load,  exec("select * from das2.allocation_use where category_name='A' and plan='MUL' and allocation_use_type='LEASE' and approval_status='APPROVED' ;") $oracle_cxn;
+{txt}
+{com}.   keep if fishing_year>=2006 & fishing_year<=2008;
+{txt}(577 observations deleted)
 
 {com}. gen date_of_trade=dofc(au_date_time);
 {txt}
 {com}. format date_of_trade %td;
 {txt}
 {com}. collapse (sum) quantity (first) dollar_value, by(permit_d permit_c right_id right_id_c date_of_trade fishing_year);
-{txt}
+{res}{txt}
 {com}. rename permit_d permit_seller;
 {res}{txt}
 {com}. rename permit_c permit_buyer;
@@ -123,158 +1559,50 @@ file /tmp/St21496.000002 saved
 > 
 > 
 > replace right_id_buyer=1807 if right_id_buyer==. & permit_buyer==121546;
-{txt}(3 real changes made)
+{txt}(0 real changes made)
 
 {com}. replace right_id_buyer=559 if right_id_buyer==. & permit_buyer==310912;
-{txt}(1 real change made)
+{txt}(0 real changes made)
 
 {com}. replace right_id_buyer=455 if right_id_buyer==. & permit_buyer==251364;
-{txt}(3 real changes made)
+{txt}(0 real changes made)
 
 {com}. replace right_id_buyer=2055 if right_id_buyer==. & permit_buyer==149334;
-{txt}(1 real change made)
+{txt}(0 real changes made)
 
 {com}. compress;
-  {txt}variable {bf}date_of_trade{sf} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
-  {txt}variable {bf}fishing_year{sf} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
-  {txt}variable {bf}permit_seller{sf} was {bf}{res}double{sf}{txt} now {bf}{res}long{sf}
-  {txt}variable {bf}permit_buyer{sf} was {bf}{res}double{sf}{txt} now {bf}{res}long{sf}
-  {txt}variable {bf}right_id_seller{sf} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
-  {txt}variable {bf}right_id_buyer{sf} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
-{txt}  (74,688 bytes saved)
+  {txt}variable {bf}{res}date_of_trade{sf}{txt} was {bf}{res}float{sf}{txt} now {bf}{res}int{sf}
+  {txt}variable {bf}{res}fishing_year{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
+  {txt}variable {bf}{res}permit_seller{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}long{sf}
+  {txt}variable {bf}{res}permit_buyer{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}long{sf}
+  {txt}variable {bf}{res}right_id_seller{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
+  {txt}variable {bf}{res}right_id_buyer{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
+{txt}  (49,224 bytes saved)
 
-{com}. saveold $my_workdir/leases_part1_$today_date_string.dta, replace version(12);
-{txt}{p 0 1 2}
-(saving in Stata 12 format, which can be read
-by Stata 11 or 12)
+{com}. tempfile das2_leases;
+{txt}
+{com}. gen schema="DAS2";
+{txt}
+{com}. save `das2_leases', replace;
+{txt}{p 0 4 2}
+(file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000009.tmp{rm}
+not found)
 {p_end}
-file /home/mlee/Documents/projects/Birkenbach/data_folder/leases_part1_2017_01_18.dta saved
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000009.tmp{rm}
+saved
+as .dta format
+{p_end}
 
-{com}. /*DAS2.private_transaction_use
-> C. Trips that used leased DAS */
+{com}. /*AMS lease data */
 > clear;
 {txt}
-{com}. odbc load,  exec("select * from das2.private_transaction_use where plan='MUL' and category_name='A' and allocation_use_type='LEASE' and fishing_year between 2004 and 2008 ;") $oracle_cxn;
+{com}. odbc load,  exec("select lease_exch_id,from_permit, to_permit, from_right, to_right, fishing_year, quantity, price, approval_date from ams.lease_exch_applic@sole 
+>         where FMP='MULT' and from_das_type='A-DAYS' and approval_status='APPROVED' and fishing_year>=2009;") $oracle_cxn;
 {txt}
-{com}.   rename permit_debited permit_seller;
-{res}{txt}
-{com}. rename right_id right_id_seller;
-{res}{txt}
-{com}. rename pt_permit_debited permit_buyer;
-{res}{txt}
-{com}. gen date_of_trade=dofc(au_date_time);
-{txt}
-{com}. format date_of_trade %td;
-{txt}
-{com}. /*fillin the right id of the buyer */
-> /* there's a couple of mis-matches.  some are date based*/
-> replace date_of_trade=mdy(11,5,2007) if permit_seller==230105 & permit_buyer==230222 & date_of_trade==mdy(11,6,2007) ;
-{txt}(12 real changes made)
-
-{com}. merge m:1 date_of_trade permit_seller permit_buyer right_id_seller using $my_workdir/leases_part1_$today_date_string.dta;
-{res}
-{txt}{col 5}Result{col 38}# of obs.
-{col 5}{hline 41}
-{col 5}not matched{col 30}{res}             622
-{txt}{col 9}from master{col 30}{res}               2{txt}  (_merge==1)
-{col 9}from using{col 30}{res}             620{txt}  (_merge==2)
-
-{col 5}matched{col 30}{res}          25,425{txt}  (_merge==3)
-{col 5}{hline 41}
-
-{com}. replace right_id_buyer=760 if right_id_seller==711 & permit_seller==320311 & permit_buyer==330236 & fishing_year==2008;
-{txt}(2 real changes made)
-
-{com}. drop if _merge==2;
-{txt}(620 observations deleted)
-
-{com}. keep quantity-date_of_trade right_id_buyer;
-{txt}
-{com}. drop uc dc date_allocated;
-{txt}
-{com}. gen date_charged=dofc(ptu_date);
-{txt}
-{com}. format date_charged %td;
-{txt}
-{com}. collapse (sum) quantity, by(permit_buyer right_id_buyer date_charged fishing_year);
-{txt}
-{com}. rename permit_buyer permit_debited;
-{res}{txt}
-{com}.  rename right_id_buyer right_id;
-{res}{txt}
-{com}. label var permit_de " ";
-{txt}
-{com}. label var right " ";
-{txt}
-{com}. label var quantity " ";
-{txt}
-{com}. append using `reg_use2004';
-{txt}{p 0 7 2}
-(note: variable
-right_id was 
-int, now double to accommodate using data's values)
-{p_end}
-
-{com}. compress;
-  {txt}variable {bf}fishing_year{sf} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
-  {txt}variable {bf}permit_debited{sf} was {bf}{res}double{sf}{txt} now {bf}{res}long{sf}
-  {txt}variable {bf}right_id{sf} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
-  {txt}variable {bf}date_charged{sf} was {bf}{res}double{sf}{txt} now {bf}{res}long{sf}
-{txt}  (1,481,600 bytes saved)
-
-{com}. saveold $my_workdir/usage_part1_$today_date_string.dta, replace version(12);
-{txt}{p 0 1 2}
-(saving in Stata 12 format, which can be read
-by Stata 11 or 12)
-{p_end}
-file /home/mlee/Documents/projects/Birkenbach/data_folder/usage_part1_2017_01_18.dta saved
-
-{com}. /*AMS -- 2009 to Present for DAS usage*/
-> clear;
-{txt}
-{com}. odbc load,  exec("select * from AMS.TRIP_AND_CHARGE where fmp='MULT' and DAS_TYPE='A-DAYS' and FISHING_YEAR>=2009 and charge<>0;") $oracle_cxn;
-{txt}
-{com}.   drop running_clock observer rsa mult_override fmp trip_de-charge_uc activity_code trip_source fishing_area das_type das_id trip_id tc_id charge_type;
-{txt}
-{com}.  keep if fishing_year>=2009;
-{txt}(0 observations deleted)
-
-{com}. rename permit_nbr permit;
-{res}{txt}
-{com}. destring, replace;
-{txt}permit already numeric; no {res}replace
-{txt}date_sail already numeric; no {res}replace
-{txt}date_land already numeric; no {res}replace
-{txt}fishing_year already numeric; no {res}replace
-{txt}charge already numeric; no {res}replace
-{txt}
-{com}. compress;
-  {txt}variable {bf}permit{sf} was {bf}{res}double{sf}{txt} now {bf}{res}long{sf}
-  {txt}variable {bf}fishing_year{sf} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
-{txt}  (852,320 bytes saved)
-
-{com}. notes: this only contains Category A-Days from 2009 to present. ;
-{res}{txt}
-{com}. notes: charge is denominated in days. There is one entry that is negative. I don't think it's a data error. ;
-{res}{txt}
-{com}. notes: TRIP_AND_CHARGE contains lots of other data.;
-{res}{txt}
-{com}. saveold $my_workdir/usage_part2_$today_date_string.dta, replace version(12);
-{txt}{p 0 1 2}
-(saving in Stata 12 format, which can be read
-by Stata 11 or 12)
-{p_end}
-file /home/mlee/Documents/projects/Birkenbach/data_folder/usage_part2_2017_01_18.dta saved
-
-{com}. clear;
-{txt}
-{com}. /*AMS -- 2009 to Present for DAS LEASES. These apparently aren't mirrored from GARFO anymore, but you have the supersecret ability to get them from GARFO :)*/
-> 
-> 
-> odbc load,  exec("select lease_exch_id,from_permit, to_permit, from_right, to_right, fishing_year, quantity, price, approval_date from ams.lease_exch_applic@das08_11g.nero.gl.nmfs.gov 
->         where FMP='MULT' and from_das_type='A-DAYS' and approval_status='APPROVED' and fishing_year>=2009;") dsn("cuda") user(mlee) password($mynero_pwd) lower clear;
-{txt}
-{com}. destring, replace;
+{com}.   destring, replace;
 {txt}lease_exch_id already numeric; no {res}replace
 {txt}from_permit already numeric; no {res}replace
 {txt}to_permit already numeric; no {res}replace
@@ -285,9 +1613,6 @@ file /home/mlee/Documents/projects/Birkenbach/data_folder/usage_part2_2017_01_18
 {txt}price already numeric; no {res}replace
 {txt}approval_date already numeric; no {res}replace
 {txt}
-{com}. keep if fishing_year>=2009;
-{txt}(0 observations deleted)
-
 {com}. rename to_permit permit_buyer;
 {res}{txt}
 {com}. rename from_permit permit_seller;
@@ -297,30 +1622,81 @@ file /home/mlee/Documents/projects/Birkenbach/data_folder/usage_part2_2017_01_18
 {com}. rename from_right right_id_seller;
 {res}{txt}
 {com}. compress;
-  {txt}variable {bf}lease_exch_id{sf} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
-  {txt}variable {bf}permit_seller{sf} was {bf}{res}double{sf}{txt} now {bf}{res}long{sf}
-  {txt}variable {bf}permit_buyer{sf} was {bf}{res}double{sf}{txt} now {bf}{res}long{sf}
-  {txt}variable {bf}right_id_seller{sf} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
-  {txt}variable {bf}right_id_buyer{sf} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
-  {txt}variable {bf}fishing_year{sf} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
-{txt}  (89,472 bytes saved)
+  {txt}variable {bf}{res}lease_exch_id{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}long{sf}
+  {txt}variable {bf}{res}permit_seller{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}long{sf}
+  {txt}variable {bf}{res}permit_buyer{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}long{sf}
+  {txt}variable {bf}{res}right_id_seller{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
+  {txt}variable {bf}{res}right_id_buyer{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
+  {txt}variable {bf}{res}fishing_year{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
+{txt}  (115,410 bytes saved)
 
-{com}. notes: this dataset contains leased A-Days in the Multispecies fishery from 2009 to present.;
+{com}. rename approval_date date_of_trade;
 {res}{txt}
-{com}. saveold $my_workdir/leases_part2_$today_date_string.dta, replace version(12);
-{txt}{p 0 1 2}
-(saving in Stata 12 format, which can be read
-by Stata 11 or 12)
+{com}. rename price dollar_value;
+{res}{txt}
+{com}. replace date_of_trade=dofc(date_of_trade);
+{txt}(3,847 real changes made)
+
+{com}. format date_of_trade %td;
+{txt}
+{com}. gen schema="AMS" ;
+{txt}
+{com}. /*stack on DAS2 and DAS leases */
+> append using `das2_leases';
+{txt}{p 0 7 2}
+(variable
+{bf:schema} was {bf:str3}, now {bf:str4} to accommodate using data's values)
 {p_end}
-file /home/mlee/Documents/projects/Birkenbach/data_folder/leases_part2_2017_01_18.dta saved
+
+{com}. append using `dl1';
+{txt}
+{com}. /* fix another broken entry */
+> 
+> replace date=mdy(month(date),day(date),2004)    if transfer_id==815;
+{txt}(1 real change made)
+
+{com}. save $my_workdir/leases_$today_date_string.dta, replace ;
+{txt}{p 0 4 2}
+file {bf}
+C:/Users/Min-Yang.Lee/Documents/MAM2/data_folder/leases_2023_08_09.dta{rm}
+saved
+{p_end}
 
 {com}. 
 {txt}end of do-file
 
-{com}. do "mort_elig_criteria_extractions.do";
+{com}. do "das_allocations.do";
 {txt}
 {com}. #delimit;
 {txt}delimiter now ;
+{com}. clear;
+{txt}
+{com}. odbc load,  exec("select * from das.das_allocation where fishery='MUL' and das_category='A' and fishing_year between 2004 and 2005;") $oracle_cxn;
+{txt}
+{com}.   rename fishery fmp;
+{res}{txt}
+{com}. rename das_category das_type;
+{res}{txt}
+{com}. rename right_to_days_id mri;
+{res}{txt}
+{com}. keep if transfer_id==.;
+{txt}(1,640 observations deleted)
+
+{com}. keep mri das_net_allocation fishing_year;
+{txt}
+{com}. rename das_net categoryA_DAS;
+{res}{txt}
+{com}. tempfile das;
+{txt}
+{com}. *saveold $my_workdir/das_allocation_$today_date_string.dta, replace version(12);
+. save `das';
+{txt}{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000001.tmp{rm}
+saved
+as .dta format
+{p_end}
+
 {com}. clear;
 {txt}
 {com}. odbc load,  exec("select * from das2.allocation where plan='MUL' and category_name='A';") $oracle_cxn;
@@ -330,37 +1706,46 @@ file /home/mlee/Documents/projects/Birkenbach/data_folder/leases_part2_2017_01_1
 {com}. rename category_name das_type;
 {res}{txt}
 {com}. destring, replace;
-{txt}das_type contains nonnumeric characters; no {res}replace
-{txt}fmp contains nonnumeric characters; no {res}replace
+{txt}das_type: contains nonnumeric characters; no {res}replace
+{txt}fmp: contains nonnumeric characters; no {res}replace
 {txt}right_id already numeric; no {res}replace
-{txt}credit_type contains nonnumeric characters; no {res}replace
+{txt}credit_type: contains nonnumeric characters; no {res}replace
 {txt}fishing_year already numeric; no {res}replace
-{txt}unit_of_measure contains nonnumeric characters; no {res}replace
+{txt}unit_of_measure: contains nonnumeric characters; no {res}replace
 {txt}quantity already numeric; no {res}replace
 {txt}date_allocated already numeric; no {res}replace
 {txt}optional_allocation_id already numeric; no {res}replace
-{txt}conversion_area has all characters numeric; {res}replaced {txt}as {res}byte
+{txt}conversion_area: all characters numeric; {res}replaced {txt}as {res}byte
 {txt}(13338 missing values generated)
-{res}{txt}ue contains nonnumeric characters; no {res}replace
+{res}{txt}ue: contains nonnumeric characters; no {res}replace
 {txt}de already numeric; no {res}replace
-{txt}uc contains nonnumeric characters; no {res}replace
+{txt}uc: contains nonnumeric characters; no {res}replace
 {txt}dc already numeric; no {res}replace
 {txt}
-{com}. keep if fishing_year>=2004 & fishing_year<=2008;
-{txt}(1,341 observations deleted)
+{com}. keep if fishing_year>=2006 & fishing_year<=2008;
+{txt}(5,200 observations deleted)
 
 {com}. tempfile das2;
 {txt}
 {com}. collapse (sum) quantity, by(right_id credit_type fishing_year);
-{txt}
+{res}{txt}
 {com}. compress;
-  {txt}variable {bf}right_id{sf} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
-  {txt}variable {bf}fishing_year{sf} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
-{txt}  (143,808 bytes saved)
+  {txt}variable {bf}{res}right_id{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
+  {txt}variable {bf}{res}fishing_year{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
+{txt}  (97,500 bytes saved)
 
 {com}. save `das2', replace;
-{txt}(note: file /tmp/St21496.000001 not found)
-file /tmp/St21496.000001 saved
+{txt}{p 0 4 2}
+(file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000002.tmp{rm}
+not found)
+{p_end}
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000002.tmp{rm}
+saved
+as .dta format
+{p_end}
 
 {com}. /*AMS -- 2007 to Present */
 > clear;
@@ -372,111 +1757,1206 @@ file /tmp/St21496.000001 saved
 {txt}fishing_year already numeric; no {res}replace
 {txt}root_mri already numeric; no {res}replace
 {txt}charge_mri already numeric; no {res}replace
-{txt}fmp contains nonnumeric characters; no {res}replace
-{txt}das_type contains nonnumeric characters; no {res}replace
+{txt}fmp: contains nonnumeric characters; no {res}replace
+{txt}das_type: contains nonnumeric characters; no {res}replace
 {txt}quantity already numeric; no {res}replace
-{txt}unit contains nonnumeric characters; no {res}replace
-{txt}allocation_type contains nonnumeric characters; no {res}replace
-{txt}fishing_area has all characters numeric; {res}replaced {txt}as {res}byte
-{txt}(35659 missing values generated)
+{txt}unit: contains nonnumeric characters; no {res}replace
+{txt}allocation_type: contains nonnumeric characters; no {res}replace
+{txt}fishing_area: all characters numeric; {res}replaced {txt}as {res}byte
+{txt}(54863 missing values generated)
 {res}{txt}effective_date already numeric; no {res}replace
 {txt}de already numeric; no {res}replace
-{txt}ue contains nonnumeric characters; no {res}replace
+{txt}ue: contains nonnumeric characters; no {res}replace
 {txt}dc already numeric; no {res}replace
-{txt}uc contains nonnumeric characters; no {res}replace
+{txt}uc: contains nonnumeric characters; no {res}replace
 {txt}
 {com}. keep if fishing_year>=2009;
 {txt}(8,657 observations deleted)
 
 {com}. collapse (sum) quantity, by(fishing_year allocation_type root_mri);
-{txt}
+{res}{txt}
 {com}. rename allocation_type credit_type;
 {res}{txt}
 {com}. rename root_mri right_id;
 {res}{txt}
 {com}. compress;
-  {txt}variable {bf}fishing_year{sf} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
-  {txt}variable {bf}right_id{sf} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
-{txt}  (292,740 bytes saved)
+  {txt}variable {bf}{res}fishing_year{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
+  {txt}variable {bf}{res}right_id{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
+{txt}  (512,400 bytes saved)
 
 {com}. append using `das2';
 {txt}
 {com}. rename right_id mri;
 {res}{txt}
 {com}.  drop if inlist(credit_type,"LEASE IN", "LEASE OUT");
-{txt}(2,768 observations deleted)
+{txt}(4,197 observations deleted)
 
 {com}.  collapse (sum) quantity, by(mri fishing_year);
-{txt}
+{res}{txt}
 {com}.  rename quantity categoryA_DAS;
 {res}{txt}
 {com}. save `das2', replace;
-{txt}file /tmp/St21496.000001 saved
+{txt}{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000002.tmp{rm}
+saved
+as .dta format
+{p_end}
+
+{com}. append using `das';
+{txt}{p 0 7 2}
+(variable
+{bf:fishing_year} was {bf:int}, now {bf:double} to accommodate using data's values)
+{p_end}
+{p 0 7 2}
+(variable
+{bf:mri} was {bf:int}, now {bf:double} to accommodate using data's values)
+{p_end}
+
+{com}. sort mri fishing_year;
+{txt}
+{com}. save $my_workdir/das_allocations_$today_date_string.dta, replace ;
+{txt}{p 0 4 2}
+file {bf}
+C:/Users/Min-Yang.Lee/Documents/MAM2/data_folder/das_allocations_2023_08_09.dta{rm}
+saved
+{p_end}
+
+{com}. 
+{txt}end of do-file
+
+{com}. do "cr_boats.do";
+{txt}
+{com}. #delimit;
+{txt}delimiter now ;
+{com}. clear;
+{txt}
+{com}.         odbc load,  exec("select * from vps_vessel where ap_year>=2004 and vp_num in (
+>         select distinct vp_num from vps_vessel where ap_num in (
+>                 select distinct ap_num from permit.vps_owner where business_id in 
+>                         (select distinct business_id  from permit.bus_own where name_last like '%Rafael%' and (name_first like '%Carlos%' OR name_first like '%Conceicao%')
+>                         )
+>                 )
+>         )
+> order by vp_num, ap_num
+> ;") $oracle_cxn;
+{txt}
+{com}. saveold $my_workdir/carlos_ever_$today_date_string.dta, replace version(12);
+{txt}{p 0 1 2}
+(saving in Stata 12 format, which can be read
+by Stata 11 or 12)
+{p_end}
+{p 0 4 2}
+file {bf}
+C:/Users/Min-Yang.Lee/Documents/MAM2/data_folder/carlos_ever_2023_08_09.dta{rm}
+saved
+{p_end}
 
 {com}. clear;
 {txt}
-{com}. odbc load,  exec("select per_num, right_id, hull_id, vessel, date_eligible, date_cancelled, auth_type, remark  from mqrs.mort_elig_criteria mq  
+{com}.         odbc load,  exec("
+> select * from vps_vessel where ap_num in (
+>         select distinct ap_num from permit.vps_owner where business_id in 
+>                 (select distinct business_id  from permit.bus_own where name_last like '%Rafael%' and (name_first like '%Carlos%' OR name_first like '%Conceicao%')
+>                 )
+>         )
+> order by vp_num, ap_num
+> ;") $oracle_cxn;
+{txt}
+{com}. saveold $my_workdir/carlos_owns_these_$today_date_string.dta, replace version(12);
+{txt}{p 0 1 2}
+(saving in Stata 12 format, which can be read
+by Stata 11 or 12)
+{p_end}
+{p 0 4 2}
+file {bf}
+C:/Users/Min-Yang.Lee/Documents/MAM2/data_folder/carlos_owns_these_2023_08_09.dta{rm}
+saved
+{p_end}
+
+{com}. 
+{txt}end of do-file
+
+{com}. #delimit ;
+{txt}delimiter now ;
+{com}. *do "das_allocations_used.do";
+. do "das_allocations_usedR.do";
+{txt}
+{com}. 
+. 
+. /*
+> 
+>         DAS (2004/5)
+>         DAS2 (2006-8)
+>         AMS (2009-2017)
+> 
+> 
+> 
+> For 2009 to present,
+>         AMS.TRIP_AND_CHARGE has permit_nbr, datesail and dateland and the charge.
+>                 Charge type is T, C, S.
+>                         1 'C' entry and it's negative. (Compensation?)
+>                         4 'S' entries.  All from FY 2016. MULT_MONK_USAGE.
+>                 Running clock is Y/N
+> 
+>                 AMS.lease_exch_applic
+>  */
+. 
+. #delimit;
+{txt}delimiter now ;
+{com}. *quietly do "/home/mlee/Documents/Workspace/technical folder/do file scraps/odbc_connection_macros.do";
+. *global oracle_cxn "conn("$mysole_conn") lower";
+. local date: display %td_CCYY_NN_DD date(c(current_date), "DMY");
+{res}{txt}
+{com}. global today_date_string = subinstr(trim("`date'"), " " , "_", .);
+{txt}
+{com}. clear;
+{txt}
+{com}. tempfile das2_usage das1_usage reg_use2006 das2a initial vaf;
+{txt}
+{com}. clear;
+{txt}
+{com}. odbc load,  exec("select * from das2.valid_accounting_function")  $oracle_cxn;
+{txt}
+{com}.   drop calendar parameter;
+{txt}
+{com}. drop if start_date>=end_date;
+{txt}(4 observations deleted)
+
+{com}. replace end_date=end_date+msofhours(24)-1;
+{txt}(196 real changes made)
+
+{com}. save `vaf', replace;
+{txt}{p 0 4 2}
+(file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000006.tmp{rm}
+not found)
+{p_end}
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000006.tmp{rm}
+saved
+as .dta format
+{p_end}
+
+{com}. use  $my_workdir/das2_activity_codes.dta, clear;
+{txt}
+{com}. merge 1:m activity_code using `vaf';
+{res}
+{txt}{col 5}Result{col 33}Number of obs
+{col 5}{hline 41}
+{col 5}Not matched{col 30}{res}              15
+{txt}{col 9}from master{col 30}{res}              15{txt}  (_merge==1)
+{col 9}from using{col 30}{res}               0{txt}  (_merge==2)
+
+{col 5}Matched{col 30}{res}             574{txt}  (_merge==3)
+{col 5}{hline 41}
+
+{com}. drop if _merge==1;
+{txt}(15 observations deleted)
+
+{com}. assert _merge==3;
+{txt}
+{com}. drop _merge;
+{txt}
+{com}. keep if plan=="MUL";
+{txt}(171 observations deleted)
+
+{com}. save  $my_workdir/das2_activity_codes_augmented.dta, replace;
+{txt}{p 0 4 2}
+file {bf}
+C:/Users/Min-Yang.Lee/Documents/MAM2/data_folder/das2_activity_codes_augmented.dta{rm}
+saved
+{p_end}
+
+{com}. clear;
+{txt}
+{com}. /* DAS schema data*/
+> /* usage */
+> 
+> odbc load,  exec("select du.fishing_year, du.das_transaction_id, du.permit_number, du.das_charged_days, tr.sailing_port, tr.sailing_state, tr.sail_date_time as date_sail, tr.landing_port, tr.landing_state, tr.landing_date_time as date_land,
+>                 tr.gillnet_vessel, tr.day_trip, tr.observer_onboard, tr.das_charged_fixed, tr.fishery_code, tr.vessel_name, du.trip_length_days                 
+>         from das.das_used du, das.trips tr where du.das_transaction_id=tr.das_transaction_id and du.permit_number=tr.permit_number and du.das_category='A' and du.fishery='MUL';") $oracle_cxn;
+{txt}
+{com}.         keep if inlist(fishing_year, 2004, 2005);
+{txt}(15,268 observations deleted)
+
+{com}. rename permit permit;
+{res}{txt}
+{com}. rename das_charged_days charge;
+{res}{txt}
+{com}. rename fishery_code activity_code;
+{res}{txt}
+{com}. collapse (sum) charge trip_length_days (first) gillnet_vessel day_trip observer_onboard das_charged_fixed vessel_name , by(das_transaction_id fishing_year permit sailing_port sailing_state date_sail landing_port landing_state date_land activity_code );
+{res}{txt}
+{com}. gen schema="DAS";
+{txt}
+{com}. save `das1_usage',replace;
+{txt}{p 0 4 2}
+(file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000002.tmp{rm}
+not found)
+{p_end}
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000002.tmp{rm}
+saved
+as .dta format
+{p_end}
+
+{com}. /* das_transaction_id has no duplicates here.*/
+> 
+> 
+> clear;
+{txt}
+{com}. /*DAS2 schema DAS2.allocation_use
+>  A. Trips */
+> odbc load,  exec(" select du.das_trip_id, du.allocation_use_type, du.au_date_time_debited, du.permit_debited, du.permit_credited, du.quantity, du.category_name, du.plan, du.right_id, du.credit_type, 
+> du.fishing_year, du.dollar_value, activity_code, dt.permit_num, dt.sailing_port, dt.sailing_state, dt.trip_start, dt.trip_end, dt.landing_port, dt.landing_state,nvl(dt.external_charge,0) as external_charge
+>  from das2.allocation_use du, das2.das_trip dt
+>  where du.category_name='A' and du.plan='MUL' and du.allocation_use_type='TRIP' and du.quantity<>0
+>  and du.das_trip_id=dt.das_trip_id;") $oracle_cxn;
+{txt}
+{com}.   keep if fishing_year>=2006 & fishing_year<=2008;
+{txt}(381 observations deleted)
+
+{com}. tempfile t1 reg_use2006;
+{txt}
+{com}.   rename permit_debited permit_seller;
+{res}{txt}
+{com}. rename right_id right_id_seller;
+{res}{txt}
+{com}. rename permit_credited permit_buyer;
+{res}{txt}
+{com}. keep if allocation_use_type=="TRIP";
+{txt}(0 observations deleted)
+
+{com}. notes: This has ONLY TRIPS. This has no PTU in it.;
+{res}{txt}
+{com}. save `reg_use2006', replace;
+{txt}{p 0 4 2}
+(file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000008.tmp{rm}
+not found)
+{p_end}
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000008.tmp{rm}
+saved
+as .dta format
+{p_end}
+
+{com}. /*DAS2.private_transaction_use
+> C. Trips that used leased DAS */
+> clear;
+{txt}
+{com}. odbc load,  exec("select du.das_trip_id, du.allocation_use_type, du.au_date_time_debited, du.pt_permit_debited, du.permit_debited, du.quantity, du.category_name, du.plan, du.right_id, du.credit_type, 
+> du.fishing_year, activity_code, dt.permit_num, dt.sailing_port, dt.sailing_state, dt.trip_start, dt.trip_end, dt.landing_port, dt.landing_state, nvl(dt.external_charge,0) as external_charge
+>  from das2.private_transaction_use du, das2.das_trip dt
+>  where du.category_name='A' and du.plan='MUL'  and du.quantity<>0
+>  and du.das_trip_id=dt.das_trip_id;") $oracle_cxn;
+{txt}
+{com}.   /*
+> 
+> *odbc load,  exec("select * from das2.private_transaction_use where plan='MUL' and category_name='A' and allocation_use_type='LEASE' ;") $oracle_cxn;  
+> rename permit_debited permit_seller;
+> rename right_id right_id_seller;
+> rename pt_permit_debited permit_buyer;
+> gen date_of_trade=dofc(au_date_time);
+> format date_of_trade %td;
+> 
+> /*fillin the right id of the buyer */
+> /* there's a couple of mis-matches.  some are date based*/
+> replace date_of_trade=mdy(11,5,2007) if permit_seller==230105 & permit_buyer==230222 & date_of_trade==mdy(11,6,2007) ;
+> merge m:1 date_of_trade permit_seller permit_buyer right_id_seller using `das2_leases';
+> replace right_id_buyer=760 if right_id_seller==711 & permit_seller==320311 & permit_buyer==330236 & fishing_year==2008;
+> drop if _merge==2;
+> keep quantity-date_of_trade right_id_buyer;
+> drop uc dc date_allocated;
+> gen date_charged=dofc(ptu_date);
+> format date_charged %td;
+> 
+> */
+> 
+> keep if fishing_year>=2006 & fishing_year<=2008;
+{txt}(174 observations deleted)
+
+{com}. append using `reg_use2006';
+{txt}{p 0 7 2}
+(variable
+{bf:landing_port} was {bf:str26}, now {bf:str31} to accommodate using data's values)
+{p_end}
+
+{com}. rename permit_num permit;
+{res}{txt}
+{com}. rename quantity charge;
+{res}{txt}
+{com}. rename trip_start date_sail;
+{res}{txt}
+{com}. rename trip_end date_land;
+{res}{txt}
+{com}. drop plan category;
+{txt}
+{com}. replace date_land=mdyhms(9,25,2008,15,21,0) if year(dofc(date_land))>=3008;
+{txt}(1 real change made)
+
+{com}. collapse (sum) charge external_charge, by (das_trip_id permit fishing_year activity_code sailing_port sailing_state date_sail date_land landing_port landing_state);
+{res}{txt}
+{com}. gen schema="DAS2";
+{txt}
+{com}. save `das2_usage', replace;
+{txt}{p 0 4 2}
+(file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000001.tmp{rm}
+not found)
+{p_end}
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000001.tmp{rm}
+saved
+as .dta format
+{p_end}
+
+{com}. append using `das1_usage';
+{txt}
+{com}. gen marker=_n;
+{txt}
+{com}. count;
+  {res}117,857
+{txt}
+{com}. joinby activity_code using $my_workdir/das2_activity_codes_augmented.dta, unmatched(master);
+{txt}
+{com}. /* make sure I have all my observations */
+> 
+> gen flag=0;
+{txt}
+{com}. replace flag=1 if date_sail>=start_date;
+{txt}(144,423 real changes made)
+
+{com}. replace flag=0 if date_sail>end_date;
+{txt}(29,967 real changes made)
+
+{com}. replace flag=1 if _merge==1;
+{txt}(3,398 real changes made)
+
+{com}. bysort marker: egen tot=total(flag);
+{txt}
+{com}. drop if tot==0 & permit==410163 & schema=="DAS" & _merge==3 & area_type=="differential";
+{txt}(1 observation deleted)
+
+{com}. replace flag=1 if tot==0;
+{txt}(3 real changes made)
+
+{com}. keep if flag==1;
+{txt}(77,719 observations deleted)
+
+{com}. sort marker;
+{txt}
+{com}. gen check=marker-marker[_n-1];
+{txt}(1 missing value generated)
+
+{com}. assert check==1 | (check==. & _n==1);
+{txt}
+{com}. drop check marker flag tot;
+{txt}
+{com}. drop _merge start_date end_date;
+{txt}
+{com}. save `das2_usage', replace;
+{txt}{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000001.tmp{rm}
+saved
+as .dta format
+{p_end}
+
+{com}. clear;
+{txt}
+{com}. odbc load,  exec("select * from AMS.TRIP_AND_CHARGE where fmp='MULT' and DAS_TYPE='A-DAYS' and charge<>0 and fishing_year>=2009;") $oracle_cxn;
+{txt}
+{com}.   drop running_clock observer rsa mult_override fmp trip_de-charge_uc trip_source fishing_area das_type tc_id charge_type;
+{txt}
+{com}.  rename das_id ams_das_id;
+{res}{txt}
+{com}. rename trip_id ams_trip_id;
+{res}{txt}
+{com}. rename permit_nbr permit;
+{res}{txt}
+{com}.  destring, replace;
+{txt}ams_das_id already numeric; no {res}replace
+{txt}ams_trip_id already numeric; no {res}replace
+{txt}permit already numeric; no {res}replace
+{txt}activity_code: contains nonnumeric characters; no {res}replace
+{txt}date_sail already numeric; no {res}replace
+{txt}date_land already numeric; no {res}replace
+{txt}fishing_year already numeric; no {res}replace
+{txt}charge already numeric; no {res}replace
+{txt}
+{com}. compress;
+  {txt}variable {bf}{res}ams_das_id{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}long{sf}
+  {txt}variable {bf}{res}ams_trip_id{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}long{sf}
+  {txt}variable {bf}{res}permit{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}long{sf}
+  {txt}variable {bf}{res}fishing_year{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
+{txt}  (2,186,748 bytes saved)
+
+{com}. notes: charge is denominated in days. There is one entry that is negative. I don't think it's a data error. ;
+{res}{txt}
+{com}.  collapse (sum) charge, by(ams_das_id ams_trip_id permit date_s date_l fishing activity_code);
+{res}{txt}
+{com}.  gen schema="AMS";
+{txt}
+{com}.  pause;
+{txt}
+{com}. tempfile ams;
+{txt}
+{com}.  save `ams', replace;
+{txt}{p 0 4 2}
+(file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000009.tmp{rm}
+not found)
+{p_end}
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000009.tmp{rm}
+saved
+as .dta format
+{p_end}
+
+{com}.  use $my_workdir/ams_activity_codes.dta, replace;
+{txt}
+{com}. keep if fmp=="MULT";
+{txt}(16,145 observations deleted)
+
+{com}. keep activity_code activity_description charge_name das_category;
+{txt}
+{com}. gen str4 schema="AMS";
+{txt}
+{com}. tempfile ams_das2;
+{txt}
+{com}. save `ams_das2';
+{txt}{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_00000a.tmp{rm}
+saved
+as .dta format
+{p_end}
+
+{com}. use `ams', replace;
+{txt}
+{com}. merge m:1 schema activity_code using `ams_das2', keep( 1 3);
+{res}{txt}{p 0 7 2}
+(variable
+{bf:schema} was {bf:str3}, now {bf:str4} to accommodate using data's values)
+{p_end}
+
+{col 5}Result{col 33}Number of obs
+{col 5}{hline 41}
+{col 5}Not matched{col 30}{res}               0
+{txt}{col 5}Matched{col 30}{res}         121,484{txt}  (_merge==3)
+{col 5}{hline 41}
+
+{com}. assert _merge==3;
+{txt}
+{com}. drop _merge;
+{txt}
+{com}. save `ams', replace;
+{txt}{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000009.tmp{rm}
+saved
+as .dta format
+{p_end}
+
+{com}. append using `das2_usage';
+{txt}{p 0 7 2}
+(variable
+{bf:fishing_year} was {bf:int}, now {bf:double} to accommodate using data's values)
+{p_end}
+{p 0 7 2}
+(variable
+{bf:permit} was {bf:long}, now {bf:double} to accommodate using data's values)
+{p_end}
+{p 0 7 2}
+(variable
+{bf:activity_description} was {bf:str53}, now {bf:str157} to accommodate using data's values)
+{p_end}
+
+{com}. gen fishing_hours=hours(date_land-date_sail);
+{txt}
+{com}. /* I'm making this way too hard.
+> 1. For any DAS2 entries with activity code with Accounting=DURATION, set 
+> are_type        start_date              end_date                time_factor
+> regular         01may2004 00:00:00      30apr2006               1
+> differential    01may2006 00:00:00      21nov2006 00:00:00      1.4
+> differential    22nov2006 00:00:00                              2
+> 
+> 2. for any DAS2 entries with activity code with accounting=FIXED INTERVAL
+>         area=regular is always 3lower /15upper /15 fixed / and 1 to one
+> differential    MUL     A       3       11      15      1.4     01-MAY-04       21-NOV-06
+> differential    MUL     A       3       7.5     15      2       22-NOV-06       
+> */
+> 
+> 
+> /* duration types */
+> gen charge_by_hand=fishing_hours;
+{txt}
+{com}. /* Duration differential*/
+> /*DAS and DAS2 schema */
+> replace charge_by_hand=fishing_hours*1.4 if area_type=="differential" & accounting=="DURATION" & schema~="AMS";
+{txt}(23,722 real changes made)
+
+{com}. replace charge_by_hand=fishing_hours*2 if area_type=="differential" & accounting=="DURATION" & date_sail>=clock("11/22/2006 00:00:00", "MDYhms")& schema~="AMS";
+{txt}(17,189 real changes made)
+
+{com}. /* Fixed interval */
+> /* datesail is between May 1, 2006 and Nov 21, 2006  */
+> /* regular trips less than 3 hours */  
+> replace charge_by_hand=fishing_hours*1 if accounting=="FIXED INTERVAL" & area=="regular" & date_sail>=clock("05/01/2006 00:00:00", "MDYhms") & date_sail<clock("11/22/2006 00:00:00", "MDYhms") & fishing_hours<3 ;
+{txt}(0 real changes made)
+
+{com}. /* differential trips less than 3 hours */  
+> replace charge_by_hand=fishing_hours*1.4 if accounting=="FIXED INTERVAL" & area=="differential"  & date_sail>=clock("05/01/2006 00:00:00", "MDYhms") & date_sail<clock("11/22/2006 00:00:00", "MDYhms") & fishing_hours<3 ;
+{txt}(207 real changes made)
+
+{com}. /* regular trips more than 15 hours */  
+> replace charge_by_hand=fishing_hours*1 if accounting=="FIXED INTERVAL" & area=="regular" & date_sail>=clock("05/01/2006 00:00:00", "MDYhms") & date_sail<clock("11/22/2006 00:00:00", "MDYhms") & fishing_hours>=15 ;
+{txt}(0 real changes made)
+
+{com}. /* differential trips more than 11 hours */  
+> replace charge_by_hand=fishing_hours*1.4 if accounting=="FIXED INTERVAL" & area=="differential"  & date_sail>=clock("05/01/2006 00:00:00", "MDYhms") & date_sail<clock("11/22/2006 00:00:00", "MDYhms") & fishing_hours>=11;
+{txt}(2,230 real changes made)
+
+{com}.  /* regular trips between 3 and 15*/  
+> replace charge_by_hand=15 if accounting=="FIXED INTERVAL" & area=="regular" & date_sail>=clock("05/01/2006 00:00:00", "MDYhms") & date_sail<clock("11/22/2006 00:00:00", "MDYhms") & fishing_hours>=3 & fishing_hours<=15 ;
+{txt}(0 real changes made)
+
+{com}. /* regular trips between 3 and 11*/  
+> replace charge_by_hand=15 if accounting=="FIXED INTERVAL" & area=="differential" & date_sail>=clock("05/01/2006 00:00:00", "MDYhms") & date_sail<clock("11/22/2006 00:00:00", "MDYhms") & fishing_hours>=3 & fishing_hours<=11 ;
+{txt}(3,526 real changes made)
+
+{com}. /* Fixed interval */
+> /* datesail is after nov 22, 2006  and on/before April 30, 2009 */
+> /* regular trips less than 3 hours */  
+> replace charge_by_hand=fishing_hours*1 if accounting=="FIXED INTERVAL" & area=="regular" & date_sail>=clock("11/22/2006 00:00:00", "MDYhms") & fishing_hours<3 & schema=="DAS2";
+{txt}(0 real changes made)
+
+{com}. /* differential trips less than 3 hours */  
+> replace charge_by_hand=fishing_hours*2 if accounting=="FIXED INTERVAL" & area=="differential"  & date_sail>=clock("11/22/2006 00:00:00", "MDYhms") & fishing_hours<3  & schema=="DAS2";
+{txt}(1,342 real changes made)
+
+{com}. /* regular trips more than 15 hours */  
+> replace charge_by_hand=fishing_hours*1 if accounting=="FIXED INTERVAL" & area=="regular" & date_sail>=clock("11/22/2006 00:00:00", "MDYhms") & fishing_hours>=15 & schema=="DAS2";
+{txt}(0 real changes made)
+
+{com}. /* differential trips more than 7.5hours */  
+> replace charge_by_hand=fishing_hours*2 if accounting=="FIXED INTERVAL" & area=="differential"  & date_sail>=clock("11/22/2006 00:00:00", "MDYhms") & fishing_hours>=7.5 & schema=="DAS2";
+{txt}(9,982 real changes made)
+
+{com}.  /* regular trips between 3 and 15*/  
+> replace charge_by_hand=15 if accounting=="FIXED INTERVAL" & area=="regular" & date_sail>=clock("11/22/2006 00:00:00", "MDYhms") & fishing_hours>=3 & fishing_hours<=15 & schema=="DAS2";
+{txt}(1,823 real changes made)
+
+{com}. /* regular trips between 3 and 11*/  
+> replace charge_by_hand=15 if accounting=="FIXED INTERVAL" & area=="differential" & date_sail>=clock("11/22/2006 00:00:00", "MDYhms")  & fishing_hours>=3 & fishing_hours<=7.5 & schema=="DAS2";
+{txt}(8,702 real changes made)
+
+{com}. /* now just need to deal with AMS FY2009 and beyond.
+> using charge_name DAY GILLNET,  GOMDA DAY GILLNET SNEDA, DAY GILLNET MULT
+>  */
+>  
+>  /* Duration differential*/
+> /*AMS schema */
+> replace charge_by_hand=fishing_hours*2 if inlist(charge_name,"GOMDA", "SNEDA", "HOOK - SNEDA") & schema=="AMS";
+{txt}(8,265 real changes made)
+
+{com}.  /* Fixed interval */
+> /*AMS schema for Day Gillnet*/
+> replace charge_by_hand=15 if inlist(charge_name,"DAY GILLNET - MULT") & date_sail>=clock("05/01/2009 00:00:00", "MDYhms") & fishing_hours>=3 & fishing_hours<=15 & schema=="AMS";
+{txt}(4,275 real changes made)
+
+{com}. /*AMS schema for Day Gillnet in a differential Area*/
+> replace charge_by_hand=15 if inlist(charge_name,"DAY GILLNET - GOMDA","DAY GILLNET - SNEDA") & date_sail>=clock("05/01/2009 00:00:00", "MDYhms") & fishing_hours>=3 & fishing_hours<=7.5 & schema=="AMS";
+{txt}(5,721 real changes made)
+
+{com}. replace charge_by_hand=2*fishing_hours if inlist(charge_name,"DAY GILLNET - GOMDA","DAY GILLNET - SNEDA") & date_sail>=clock("05/01/2009 00:00:00", "MDYhms") &  fishing_hours>=7.5 & schema=="AMS";
+{txt}(5,632 real changes made)
+
+{com}. replace charge_by_hand=charge_by_hand/24;
+{txt}(239,341 real changes made)
+
+{com}. replace fishing_hours=fishing_hours/24;
+{txt}(239,341 real changes made)
+
+{com}. rename fishing_hours fishing_days;
+{res}{txt}
+{com}. /*  in 2010 and after, DAS get charged in 24 hour increments for common pool vessels. Not exactly sure what is done for sector vessels, but whever*/
+> replace charge_by_hand=ceil(charge_by_hand) if date_sail>=clock("05/01/2010 00:00:00", "MDYhms") & schema=="AMS";
+{txt}(96,038 real changes made)
+
+{com}.  order fishing_days charge_by_hand external_charge, after(charge);
+{txt}
+{com}. compress;
+  {txt}variable {bf}{res}permit{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}long{sf}
+  {txt}variable {bf}{res}fishing_year{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
+  {txt}variable {bf}{res}das_trip_id{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}long{sf}
+  {txt}variable {bf}{res}das_transaction_id{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}long{sf}
+  {txt}variable {bf}{res}activity_description{sf}{txt} was {bf}{res}str157{sf}{txt} now {bf}{res}str155{sf}
+  {txt}variable {bf}{res}das_category{sf}{txt} was {bf}{res}str19{sf}{txt} now {bf}{res}str6{sf}
+  {txt}variable {bf}{res}fishing_area{sf}{txt} was {bf}{res}str58{sf}{txt} now {bf}{res}str51{sf}
+  {txt}variable {bf}{res}category_name{sf}{txt} was {bf}{res}str19{sf}{txt} now {bf}{res}str1{sf}
+  {txt}variable {bf}{res}accounting_function{sf}{txt} was {bf}{res}str18{sf}{txt} now {bf}{res}str14{sf}
+{txt}  (14,839,142 bytes saved)
+
+{com}. rename das_trip_id das2_trip_id;
+{res}{txt}
+{com}. order das_transaction das2_trip_id ams_trip_id ams_das_id;
+{txt}
+{com}. drop plan category_name;
+{txt}
+{com}. gen day_gillnet=0 ;
+{txt}
+{com}. replace day_gillnet=1 if strmatch(charge_name,"DAY GILLNET*")  & schema ~= "DAS";
+{txt}(19,815 real changes made)
+
+{com}. replace day_gillnet=1 if strmatch(fishing_gear,"Day Gillnet*");
+{txt}(25,223 real changes made)
+
+{com}. replace activity_desc=lower(activity_desc);
+{txt}(166,488 real changes made)
+
+{com}. replace day_gillnet=1 if strmatch(activity_description,"*day gillnet*");
+{txt}(17,916 real changes made)
+
+{com}. replace day_gillnet=1 if gillnet_vessel=="Y" & day_trip=="D" & schema=="DAS";
+{txt}(389 real changes made)
+
+{com}. gen gillnet=0;
+{txt}
+{com}. replace gillnet=1 if strmatch(activity_description,"*gillnet*") & schema~="DAS";
+{txt}(61,127 real changes made)
+
+{com}. replace gillnet=1 if gillnet_vessel=="Y" & schema=="DAS";
+{txt}(17,598 real changes made)
+
+{com}. replace gillnet=1 if strmatch(charge_name,"*GILLNET*") & schema~="DAS";
+{txt}(19,790 real changes made)
+
+{com}. replace gillnet=1 if inlist(fishing_gear,"Day Gillnet", "Gillnet", "Trip Gillnet", "gillnet")  & schema~="DAS";
+{txt}(191 real changes made)
+
+{com}. replace gillnet=0 if strmatch(activity_description,"*non gillnet*") & schema~="DAS";
+{txt}(30,617 real changes made)
+
+{com}. replace gillnet=0 if inlist(fishing_gear,"Hook Gear", "Non-Gillnet", "non-gillnet") & schema~="DAS";
+{txt}(0 real changes made)
+
+{com}. replace gillnet=1 if strmatch(activity_code,"MNK-GIL") & schema~="DAS";
+{txt}(583 real changes made)
+
+{com}. save $my_workdir/das_usage_$today_date_string.dta, replace;
+{txt}{p 0 4 2}
+file {bf}
+C:/Users/Min-Yang.Lee/Documents/MAM2/data_folder/das_usage_2023_08_09.dta{rm}
+saved
+{p_end}
+
+{com}. /*
+> 
+> 
+> notes: the schema column lets me know where the data came from.  Not all fields were collected in all three schema. ;
+> notes: Permit, charge, fishing_year, date_sail, date_land, fishing_year and activity_code are in all;
+> notes: sailing port, state, landings port state, gillnet, and observer were only databased in AMS.;
+> notes: DAS2 contains right_ids, but DAS and AMS do not.; 
+> compress;
+> 
+> replace date_land=mdyhms(9,25,2008,15,21,0) if year(dofc(date_land))>=3008;
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> use $my_workdir/das2_activity_codes.dta, replace;
+> gen str4 schema="DAS2";
+> append using `ams_das2';
+> compress;
+> save `ams_das2', replace;
+> 
+> use $my_workdir/das_usage_$today_date_string.dta, clear;
+> merge m:1 activity_code schema using `ams_das2', keep(1 3);
+> /* _merge==1 is DAS schema. 
+> _merge==2 is codes without trips. Like B days.
+> _merge==3 is what we want
+> 
+> */
+> 
+> pause;
+> 
+> gen manual_charge_hours=hours(date_land-date_sail);
+> gen multipier=1;
+> replace multipier=1.4 if date_sail>=cofd(date("05/01/2006", "MDY") & date_sail<=cofd(date("11/21/2006", "MDY") & inlist(charge_name,"DAY GILLNET - GOMDA", "DAY GILLNET - SNEDA","GOMDA", "SNEDA", "HOOK - SNEDA");
+> 
+> 
+> drop activity_description fishing_gear charge_name das_category _merge;
+> saveold $my_workdir/das_usage_$today_date_string.dta, replace version(12);
+> 
+> */
+> 
+> 
+> 
+> 
+> 
+> /*
+> 
+> 
+> 
+> clear;
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> /* DAS schema data*/
+> 
+> /* leases */
+> odbc load, exec("select * from das.das_transfer_lease where fishery='MUL' and das_category='A' and TRANSACTION_TYPE='L' order by nmfs_approval_date desc;") $oracle_cxn;
+> keep if inlist(fishing_year, 2004, 2005);
+> rename grantor_right_to_days_id right_id_seller;
+> rename grantee_right_to_days_id right_id_buyer;
+> 
+> rename grantor_permit_number permit_seller;
+> rename grantee_permit_number permit_buyer;
+> drop user_changed date_changed user_entered transaction_type; 
+> replace nmfs_approval_date=dofc(nmfs_approval_date);
+> replace date_entered=dofc(date_entered);
+> 
+> format nmfs_approval_date date_entered %td;
+> rename das_leased quantity;
+> rename das_price dollar_value;
+> rename nmfs_approval date_of_trade;
+> drop fishery date_entered das_category;
+> compress;
+> tempfile dl1;
+> gen schema="DAS";
+> 
+> 
+> save `dl1';
+> 
+> /*DAS2.allocation_use
+>  B. LEASES*/
+> clear;
+> odbc load,  exec("select * from das2.allocation_use where category_name='A' and plan='MUL' and allocation_use_type='LEASE' and approval_status='APPROVED' ;") $oracle_cxn;  
+> keep if fishing_year>=2006 & fishing_year<=2008;
+> 
+> gen date_of_trade=dofc(au_date_time);
+> format date_of_trade %td;
+> collapse (sum) quantity (first) dollar_value, by(permit_d permit_c right_id right_id_c date_of_trade fishing_year);
+> rename permit_d permit_seller;
+> rename permit_c permit_buyer;
+> rename right_id_c right_id_buyer;
+> rename right_id right_id_seller;
+> order date fishing_year;
+> sort fishing_year date permit_s;
+> 
+> /* This will lookup the right_id from MQRS. It's just a few corrections, so it's easier to do by hand.
+> select a.*, b.right_id as mqrs_right_id from
+>     (select au_date_time_debited, permit_debited, permit_credited, quantity, right_id, right_id_credited from das2.allocation_use
+>     where category_name='A' and plan='MUL' and allocation_use_type='LEASE' and approval_status='APPROVED' and right_id_credited is NULL
+>     ) a, 
+>    (select per_num, date_eligible, date_cancelled, right_id from mort_elig_criteria where fishery='MULTISPECIES' and per_num in
+>     (select distinct permit_credited from das2.allocation_use
+>     where category_name='A' and plan='MUL' and allocation_use_type='LEASE' and approval_status='APPROVED' and right_id_credited is NULL
+>     )) b 
+>       where a.permit_credited=b.per_num and 
+>       a.au_date_time_debited between b.date_eligible and b.date_cancelled; 
+> */
+> 
+> 
+> 
+> replace right_id_buyer=1807 if right_id_buyer==. & permit_buyer==121546;
+> replace right_id_buyer=559 if right_id_buyer==. & permit_buyer==310912;
+> replace right_id_buyer=455 if right_id_buyer==. & permit_buyer==251364;
+> replace right_id_buyer=2055 if right_id_buyer==. & permit_buyer==149334;
+> compress;
+> 
+> tempfile das2_leases;
+> gen schema="DAS2";
+> 
+> save `das2_leases', replace;
+> 
+> 
+> /*AMS lease data */
+> 
+> odbc load,  exec("select lease_exch_id,from_permit, to_permit, from_right, to_right, fishing_year, quantity, price, approval_date from ams.lease_exch_applic@das08_11g.nero.gl.nmfs.gov 
+>         where FMP='MULT' and from_das_type='A-DAYS' and approval_status='APPROVED' and fishing_year>=2009;") dsn("cuda") user(mlee) password($mynero_pwd) lower clear;
+> destring, replace;
+> rename to_permit permit_buyer;
+> rename from_permit permit_seller;
+> rename to_right right_id_buyer;
+> rename from_right right_id_seller;
+> compress;
+> rename approval_date date_of_trade;
+> rename price dollar_value;
+> replace date_of_trade=dofc(date_of_trade);
+> format date_of_trade %td;
+> 
+> 
+> gen schema="AMS" ;
+> 
+> 
+> 
+> /*stack on DAS2 and DAS leases */
+> append using `das2_leases';
+> append using `dl1';
+> /* fix another broken entry */
+> 
+> replace date=mdy(month(date),day(date),2004)    if transfer_id==815
+> saveold $my_workdir/leases_$today_date_string.dta, replace version(12);
+> 
+> 
+> 
+> */
+> 
+> 
+
+{txt}end of do-file
+
+{com}. do "mort_elig_criteria_extractions.do";
+{txt}
+{com}. #delimit;
+{txt}delimiter now ;
+{com}. clear;
+{txt}
+{com}. odbc load,  exec("select * from das.das_allocation where fishery='MUL' and das_category='A' and fishing_year between 2004 and 2005;") $oracle_cxn;
+{txt}
+{com}.   rename fishery fmp;
+{res}{txt}
+{com}. rename das_category das_type;
+{res}{txt}
+{com}. rename right_to_days_id mri;
+{res}{txt}
+{com}. keep if transfer_id==.;
+{txt}(1,640 observations deleted)
+
+{com}. gen categoryA_DAS=das_base_allocation+das_carry_over;
+{txt}
+{com}. keep mri categoryA_DAS  fishing_year;
+{txt}
+{com}. collapse (sum) categoryA_DAS, by(mri fishing_year);
+{res}{txt}
+{com}. tempfile das;
+{txt}
+{com}. save `das';
+{txt}{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000001.tmp{rm}
+saved
+as .dta format
+{p_end}
+
+{com}. clear;
+{txt}
+{com}. odbc load,  exec("select * from das2.allocation where plan='MUL' and category_name='A';") $oracle_cxn;
+{txt}
+{com}.   rename plan fmp;
+{res}{txt}
+{com}. rename category_name das_type;
+{res}{txt}
+{com}. destring, replace;
+{txt}das_type: contains nonnumeric characters; no {res}replace
+{txt}fmp: contains nonnumeric characters; no {res}replace
+{txt}right_id already numeric; no {res}replace
+{txt}credit_type: contains nonnumeric characters; no {res}replace
+{txt}fishing_year already numeric; no {res}replace
+{txt}unit_of_measure: contains nonnumeric characters; no {res}replace
+{txt}quantity already numeric; no {res}replace
+{txt}date_allocated already numeric; no {res}replace
+{txt}optional_allocation_id already numeric; no {res}replace
+{txt}conversion_area: all characters numeric; {res}replaced {txt}as {res}byte
+{txt}(13338 missing values generated)
+{res}{txt}ue: contains nonnumeric characters; no {res}replace
+{txt}de already numeric; no {res}replace
+{txt}uc: contains nonnumeric characters; no {res}replace
+{txt}dc already numeric; no {res}replace
+{txt}
+{com}. keep if fishing_year>=2006 & fishing_year<=2008;
+{txt}(5,200 observations deleted)
+
+{com}. tempfile das2;
+{txt}
+{com}. collapse (sum) quantity, by(right_id credit_type fishing_year);
+{res}{txt}
+{com}. compress;
+  {txt}variable {bf}{res}right_id{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
+  {txt}variable {bf}{res}fishing_year{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
+{txt}  (97,500 bytes saved)
+
+{com}. save `das2', replace;
+{txt}{p 0 4 2}
+(file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000002.tmp{rm}
+not found)
+{p_end}
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000002.tmp{rm}
+saved
+as .dta format
+{p_end}
+
+{com}. /*AMS -- 2007 to Present */
+> clear;
+{txt}
+{com}. odbc load,  exec("select *  from ams.allocation_tx where FMP='MULT' and das_type='A-DAYS';") $oracle_cxn;
+{txt}
+{com}.   destring, replace;
+{txt}alloc_tx_id already numeric; no {res}replace
+{txt}fishing_year already numeric; no {res}replace
+{txt}root_mri already numeric; no {res}replace
+{txt}charge_mri already numeric; no {res}replace
+{txt}fmp: contains nonnumeric characters; no {res}replace
+{txt}das_type: contains nonnumeric characters; no {res}replace
+{txt}quantity already numeric; no {res}replace
+{txt}unit: contains nonnumeric characters; no {res}replace
+{txt}allocation_type: contains nonnumeric characters; no {res}replace
+{txt}fishing_area: all characters numeric; {res}replaced {txt}as {res}byte
+{txt}(54863 missing values generated)
+{res}{txt}effective_date already numeric; no {res}replace
+{txt}de already numeric; no {res}replace
+{txt}ue: contains nonnumeric characters; no {res}replace
+{txt}dc already numeric; no {res}replace
+{txt}uc: contains nonnumeric characters; no {res}replace
+{txt}
+{com}. keep if fishing_year>=2009;
+{txt}(8,657 observations deleted)
+
+{com}. collapse (sum) quantity, by(fishing_year allocation_type root_mri);
+{res}{txt}
+{com}. rename allocation_type credit_type;
+{res}{txt}
+{com}. rename root_mri right_id;
+{res}{txt}
+{com}. compress;
+  {txt}variable {bf}{res}fishing_year{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
+  {txt}variable {bf}{res}right_id{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
+{txt}  (512,400 bytes saved)
+
+{com}. append using `das2';
+{txt}
+{com}. rename right_id mri;
+{res}{txt}
+{com}.  drop if inlist(credit_type,"LEASE IN", "LEASE OUT");
+{txt}(4,197 observations deleted)
+
+{com}.  collapse (sum) quantity, by(mri fishing_year);
+{res}{txt}
+{com}.  rename quantity categoryA_DAS;
+{res}{txt}
+{com}. append using `das';
+{txt}{p 0 7 2}
+(variable
+{bf:fishing_year} was {bf:int}, now {bf:double} to accommodate using data's values)
+{p_end}
+{p 0 7 2}
+(variable
+{bf:mri} was {bf:int}, now {bf:double} to accommodate using data's values)
+{p_end}
+
+{com}. save `das2', replace;
+{txt}{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000002.tmp{rm}
+saved
+as .dta format
+{p_end}
+
+{com}. clear;
+{txt}
+{com}. odbc load,  exec("select per_num, right_id, hull_id, vessel, date_eligible, date_cancelled, auth_type, remark, len, hp  from mqrs.mort_elig_criteria mq  
 > where fishery='MULTISPECIES' 
 > AND date_eligible is not null 
 > AND (date_cancelled>=to_date('05/01/2000','MM/DD/YYYY') or date_cancelled is null) 
 > AND ((date_cancelled > date_eligible) or date_cancelled is null);") $oracle_cxn;
 {txt}
-{com}.   destring, replace;
+{com}.   preserve;
+{txt}
+{com}. /* hack the missing MQRS data
+> From Ted Hawes:
+> Hi Min-Yang,
+> 
+> It looks like these were corrected in 2009 as part of a clean-up project.  You can see the updated MRI for these MRIs using this script...I just changed right_id to auth_id. 
+> 
+>  I'm not familiar with the das2.allocation table.  If you want to discuss more, let me know.  
+> 
+> select * from mort_elig_criteria where auth_id in(1179,1183,1187,1196,1219,1255,1261,1293,1296,1362,1374,2423);  
+> 
+>  */
+>  clear;
+{txt}
+{com}. odbc load,  exec("select per_num, right_id, auth_id, hull_id, vessel, date_eligible, date_cancelled, auth_type, remark, len, hp  from mqrs.mort_elig_criteria mq  
+> where fishery='MULTISPECIES' AND
+> auth_id in(1179,1183,1187,1196,1219,1255,1261,1293,1296,1362,1374,2423) 
+> AND date_eligible is not null 
+> AND (date_cancelled>=to_date('05/01/2000','MM/DD/YYYY') or date_cancelled is null) 
+> AND ((date_cancelled > date_eligible) or date_cancelled is null);") $oracle_cxn;
+{txt}
+{com}.   replace right_id=auth_id;
+{txt}(12 real changes made)
+
+{com}. tempfile e1;
+{txt}
+{com}. save `e1', replace;
+{txt}{p 0 4 2}
+(file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000004.tmp{rm}
+not found)
+{p_end}
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000004.tmp{rm}
+saved
+as .dta format
+{p_end}
+
+{com}. clear;
+{txt}
+{com}. odbc load,  exec("select per_num, right_id, auth_id, hull_id, vessel, date_eligible, date_cancelled, auth_type, remark, len, hp  from mqrs.mort_elig_criteria mq  
+> where fishery='MULTISPECIES' AND
+> auth_id in(1174,1176,1179,1183,1184,1187,1196,1209,1298,1358,1372) 
+> AND date_eligible is not null 
+> AND (date_cancelled>=to_date('05/01/2000','MM/DD/YYYY') or date_cancelled is null) 
+> AND ((date_cancelled > date_eligible) or date_cancelled is null);") $oracle_cxn;
+{txt}
+{com}.   replace right_id=auth_id;
+{txt}(11 real changes made)
+
+{com}. append using `e1';
+{txt}{p 0 7 2}
+(variable
+{bf:vessel} was {bf:str15}, now {bf:str17} to accommodate using data's values)
+{p_end}
+{p 0 7 2}
+(variable
+{bf:remark} was {bf:str144}, now {bf:str215} to accommodate using data's values)
+{p_end}
+
+{com}. save `e1', replace;
+{txt}{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000004.tmp{rm}
+saved
+as .dta format
+{p_end}
+
+{com}. restore;
+{txt}
+{com}. append using `e1';
+{txt}
+{com}. destring, replace;
 {txt}per_num already numeric; no {res}replace
 {txt}right_id already numeric; no {res}replace
-{txt}hull_id contains nonnumeric characters; no {res}replace
-{txt}vessel contains nonnumeric characters; no {res}replace
+{txt}hull_id: contains nonnumeric characters; no {res}replace
+{txt}vessel: contains nonnumeric characters; no {res}replace
 {txt}date_eligible already numeric; no {res}replace
 {txt}date_cancelled already numeric; no {res}replace
-{txt}auth_type contains nonnumeric characters; no {res}replace
-{txt}remark contains nonnumeric characters; no {res}replace
+{txt}auth_type: contains nonnumeric characters; no {res}replace
+{txt}remark: contains nonnumeric characters; no {res}replace
+{txt}len already numeric; no {res}replace
+{txt}hp already numeric; no {res}replace
+{txt}auth_id already numeric; no {res}replace
 {txt}
 {com}. renvars, lower;
 {txt}no renames necessary
 
 {com}. compress;
-  {txt}variable {bf}per_num{sf} was {bf}{res}double{sf}{txt} now {bf}{res}long{sf}
-  {txt}variable {bf}right_id{sf} was {bf}{res}double{sf}{txt} now {bf}{res}long{sf}
-{txt}  (35,592 bytes saved)
+  {txt}variable {bf}{res}per_num{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}long{sf}
+  {txt}variable {bf}{res}right_id{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}long{sf}
+  {txt}variable {bf}{res}auth_id{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
+{txt}  (73,598 bytes saved)
 
 {com}. sort right_id date_e date_c;
 {txt}
 {com}. gen remark1=substr(remark,1,200);
-{txt}(2,136 missing values generated)
+{txt}(2,082 missing values generated)
 
 {com}. gen remark2=substr(remark,201,.);
-{txt}(4,366 missing values generated)
+{txt}(5,148 missing values generated)
+
+{com}. replace auth_type="CPH" if strmatch(auth_type,"HISTORY RETENTION");
+{txt}(155 real changes made)
 
 {com}. drop remark;
+{txt}
+{com}. replace auth_type="CPH" if auth_type=="HISTORY RETENTION" ;
+{txt}(0 real changes made)
+
+{com}. dups, drop terse;
+
+{txt}group by:{res} per_num right_id hull_id vessel date_eligible date_cancelled auth_type len hp auth_id remark1 remark2
+
+{txt}groups formed: {res}11
+
+{txt}total observations:{res} 5257
+{txt}  in duplicates    {res}   22
+{txt}  in unique        {res} 5235
+
+{txt}(11 observations deleted)
+
+observations remaining: {res}5246
+{txt}
+{com}. drop if right_id==1901 & dofc(date_eligible)==mdy(5,4,1994);
+{txt}(1 observation deleted)
+
+{com}. drop _expand;
 {txt}
 {com}. saveold $my_workdir/mqrs_old_$today_date_string.dta, replace version(12);
 {txt}{p 0 1 2}
 (saving in Stata 12 format, which can be read
 by Stata 11 or 12)
 {p_end}
-file /home/mlee/Documents/projects/Birkenbach/data_folder/mqrs_old_2017_01_18.dta saved
+{p 0 4 2}
+file {bf}
+C:/Users/Min-Yang.Lee/Documents/MAM2/data_folder/mqrs_old_2023_08_09.dta{rm}
+saved
+{p_end}
 
 {com}. #delimit;
 {txt}delimiter now ;
-{com}. drop auth_type remark* vessel hull;
+{com}. drop remark* vessel hull;
 {txt}
 {com}. dups, drop terse;
 
-{txt}group by:{res} per_num right_id date_eligible date_cancelled
+{txt}group by:{res} per_num right_id date_eligible date_cancelled auth_type len hp auth_id
 
-{txt}groups formed: {res}24
+{txt}groups formed: {res}10
 
-{txt}total observations:{res} 4449
-{txt}  in duplicates    {res}   48
-{txt}  in unique        {res} 4401
+{txt}total observations:{res} 5245
+{txt}  in duplicates    {res}   20
+{txt}  in unique        {res} 5225
 
-{txt}(24 observations deleted)
+{txt}(10 observations deleted)
 
-observations remaining: {res}4425
+observations remaining: {res}5235
 {txt}
 {com}. drop _expand;
 {txt}
-{com}. forvalues j=2000(1)2016{c -(};
+{com}. forvalues j=2000(1)$lastyr{c -(};
 {txt}  2{com}.         gen a`j'=0;
 {txt}  3{com}.         local k=`j'+1;
 {txt}  4{com}.         replace a`j'=1 if dofc(date_eligible)<mdy(5,1,`k') & dofc(date_cancelled)>=mdy(5,1,`j');
@@ -484,80 +2964,104 @@ observations remaining: {res}4425
 {txt}  6{com}.         replace a`j'=0 if t`j'>1;
 {txt}  7{com}.         drop t`j';
 {txt}  8{com}. {c )-};
-{txt}(1,984 real changes made)
-(97 real changes made)
-(1,983 real changes made)
-(101 real changes made)
-(1,724 real changes made)
-(91 real changes made)
-(1,733 real changes made)
+{txt}(2,007 real changes made)
+(102 real changes made)
+(2,004 real changes made)
+(104 real changes made)
+(1,742 real changes made)
+(90 real changes made)
+(1,752 real changes made)
 (103 real changes made)
-(2,084 real changes made)
+(2,101 real changes made)
 (227 real changes made)
-(1,975 real changes made)
-(145 real changes made)
-(1,901 real changes made)
-(159 real changes made)
-(1,867 real changes made)
-(172 real changes made)
-(1,806 real changes made)
-(132 real changes made)
-(1,593 real changes made)
-(129 real changes made)
-(1,611 real changes made)
-(170 real changes made)
-(1,610 real changes made)
+(1,991 real changes made)
+(146 real changes made)
+(1,915 real changes made)
+(160 real changes made)
+(1,879 real changes made)
+(173 real changes made)
+(1,816 real changes made)
+(133 real changes made)
+(1,603 real changes made)
+(131 real changes made)
+(1,620 real changes made)
+(171 real changes made)
+(1,616 real changes made)
 (188 real changes made)
-(1,528 real changes made)
+(1,533 real changes made)
 (120 real changes made)
-(1,503 real changes made)
-(123 real changes made)
-(1,500 real changes made)
+(1,507 real changes made)
+(122 real changes made)
+(1,504 real changes made)
 (129 real changes made)
-(1,468 real changes made)
+(1,472 real changes made)
 (110 real changes made)
-(1,416 real changes made)
+(1,468 real changes made)
+(122 real changes made)
+(1,450 real changes made)
+(113 real changes made)
+(1,403 real changes made)
 (74 real changes made)
+(1,461 real changes made)
+(140 real changes made)
+(1,433 real changes made)
+(120 real changes made)
+(1,441 real changes made)
+(143 real changes made)
+(1,394 real changes made)
+(109 real changes made)
 
-{com}. collapse (sum) a*, by(per right);
-{txt}
+{com}. rename auth_type type_auth;
+{res}{txt}
+{com}. collapse (sum) a*, by(per right type_auth);
+{res}{txt}
 {com}. compress;
-  {txt}variable {bf}a2000{sf} was {bf}{res}double{sf}{txt} now {bf}{res}byte{sf}
-  {txt}variable {bf}a2001{sf} was {bf}{res}double{sf}{txt} now {bf}{res}byte{sf}
-  {txt}variable {bf}a2002{sf} was {bf}{res}double{sf}{txt} now {bf}{res}byte{sf}
-  {txt}variable {bf}a2003{sf} was {bf}{res}double{sf}{txt} now {bf}{res}byte{sf}
-  {txt}variable {bf}a2004{sf} was {bf}{res}double{sf}{txt} now {bf}{res}byte{sf}
-  {txt}variable {bf}a2005{sf} was {bf}{res}double{sf}{txt} now {bf}{res}byte{sf}
-  {txt}variable {bf}a2006{sf} was {bf}{res}double{sf}{txt} now {bf}{res}byte{sf}
-  {txt}variable {bf}a2007{sf} was {bf}{res}double{sf}{txt} now {bf}{res}byte{sf}
-  {txt}variable {bf}a2008{sf} was {bf}{res}double{sf}{txt} now {bf}{res}byte{sf}
-  {txt}variable {bf}a2009{sf} was {bf}{res}double{sf}{txt} now {bf}{res}byte{sf}
-  {txt}variable {bf}a2010{sf} was {bf}{res}double{sf}{txt} now {bf}{res}byte{sf}
-  {txt}variable {bf}a2011{sf} was {bf}{res}double{sf}{txt} now {bf}{res}byte{sf}
-  {txt}variable {bf}a2012{sf} was {bf}{res}double{sf}{txt} now {bf}{res}byte{sf}
-  {txt}variable {bf}a2013{sf} was {bf}{res}double{sf}{txt} now {bf}{res}byte{sf}
-  {txt}variable {bf}a2014{sf} was {bf}{res}double{sf}{txt} now {bf}{res}byte{sf}
-  {txt}variable {bf}a2015{sf} was {bf}{res}double{sf}{txt} now {bf}{res}byte{sf}
-  {txt}variable {bf}a2016{sf} was {bf}{res}double{sf}{txt} now {bf}{res}byte{sf}
-{txt}  (423,640 bytes saved)
+  {txt}variable {bf}{res}auth_id{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
+  {txt}variable {bf}{res}a2000{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}byte{sf}
+  {txt}variable {bf}{res}a2001{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}byte{sf}
+  {txt}variable {bf}{res}a2002{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}byte{sf}
+  {txt}variable {bf}{res}a2003{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}byte{sf}
+  {txt}variable {bf}{res}a2004{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}byte{sf}
+  {txt}variable {bf}{res}a2005{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}byte{sf}
+  {txt}variable {bf}{res}a2006{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}byte{sf}
+  {txt}variable {bf}{res}a2007{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}byte{sf}
+  {txt}variable {bf}{res}a2008{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}byte{sf}
+  {txt}variable {bf}{res}a2009{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}byte{sf}
+  {txt}variable {bf}{res}a2010{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}byte{sf}
+  {txt}variable {bf}{res}a2011{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}byte{sf}
+  {txt}variable {bf}{res}a2012{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}byte{sf}
+  {txt}variable {bf}{res}a2013{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}byte{sf}
+  {txt}variable {bf}{res}a2014{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}byte{sf}
+  {txt}variable {bf}{res}a2015{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}byte{sf}
+  {txt}variable {bf}{res}a2016{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}byte{sf}
+  {txt}variable {bf}{res}a2017{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}byte{sf}
+  {txt}variable {bf}{res}a2018{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}byte{sf}
+  {txt}variable {bf}{res}a2019{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}byte{sf}
+  {txt}variable {bf}{res}a2020{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}byte{sf}
+  {txt}variable {bf}{res}a2021{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}byte{sf}
+  {txt}variable {bf}{res}a2022{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}byte{sf}
+  {txt}variable {bf}{res}type_auth{sf}{txt} was {bf}{res}str17{sf}{txt} now {bf}{res}str16{sf}
+{txt}  (849,240 bytes saved)
 
-{com}. reshape long a, i(per_num right_id) j(fishing_year);
-{txt}(note: j = 2000 2001 2002 2003 2004 2005 2006 2007 2008 2009 2010 2011 2012 2013 2014 2015 2016)
+{com}. reshape long a, i(per_num right_id type_auth) j(fishing_year);
+{txt}(j = 2000 2001 2002 2003 2004 2005 2006 2007 2008 2009 2010 2011 2012 2013 2014 2015 2016 2017 2018 2019 2020 2021 2022)
 
-Data{col 36}wide{col 43}->{col 48}long
+Data{col 36}Wide{col 43}->{col 48}Long
 {hline 77}
-Number of obs.                 {res}    3560   {txt}->{res}   60520
-{txt}Number of variables            {res}      19   {txt}->{res}       4
-{txt}j variable (17 values)                    ->   {res}fishing_year
+Number of observations     {res}       5,055   {txt}->   {res}116,265     
+{txt}Number of variables        {res}          27   {txt}->   {res}6           
+{txt}j variable (23 values)                    ->   {res}fishing_year
 {txt}xij variables:
-                  {res}a2000 a2001 ... a2016   {txt}->   {res}a
+                  {res}a2000 a2001 ... a2022   {txt}->   {res}a
 {txt}{hline 77}
 
+{com}. drop auth_id;
+{txt}
 {com}. replace a=1 if a>=1;
 {txt}(0 real changes made)
 
 {com}. drop if a==0;
-{txt}(33,504 observations deleted)
+{txt}(81,183 observations deleted)
 
 {com}. drop a;
 {txt}
@@ -570,23 +3074,39 @@ Number of obs.                 {res}    3560   {txt}->{res}   60520
 {com}. rename right_id mri;
 {res}{txt}
 {com}. merge 1:1 mri fishing_year using `das2';
-{res}
-{txt}{col 5}Result{col 38}# of obs.
-{col 5}{hline 41}
-{col 5}not matched{col 30}{res}          11,387
-{txt}{col 9}from master{col 30}{res}          10,143{txt}  (_merge==1)
-{col 9}from using{col 30}{res}           1,244{txt}  (_merge==2)
+{res}{txt}{p 0 7 2}
+(variable
+{bf:fishing_year} was {bf:int}, now {bf:double} to accommodate using data's values)
+{p_end}
+{p 0 7 2}
+(variable
+{bf:mri} was {bf:long}, now {bf:double} to accommodate using data's values)
+{p_end}
 
-{col 5}matched{col 30}{res}          16,873{txt}  (_merge==3)
+{col 5}Result{col 33}Number of obs
+{col 5}{hline 41}
+{col 5}Not matched{col 30}{res}          13,464
+{txt}{col 9}from master{col 30}{res}          10,941{txt}  (_merge==1)
+{col 9}from using{col 30}{res}           2,523{txt}  (_merge==2)
+
+{col 5}Matched{col 30}{res}          24,141{txt}  (_merge==3)
 {col 5}{hline 41}
 
 {com}. keep if fishing_year>=2004;
-{txt}(7,032 observations deleted)
+{txt}(7,106 observations deleted)
 
 {com}. replace categoryA_DAS=0 if categoryA_DAS==.;
-{txt}(3,111 real changes made)
+{txt}(3,835 real changes made)
 
-{com}. notes: CategoryA DAS are the "BASE"+"CARRYOVER" + "SANCTION" Days-at-Sea.  2004-2006 are from the DAS2 schema, 2007-present are from AMS.;
+{com}. drop if categoryA_DAS==0;
+{txt}(11,032 observations deleted)
+
+{com}. drop if type_auth=="";
+{txt}(1,346 observations deleted)
+
+{com}. notes: A permit number doesn't get detached from a MRI in CPH until that MRI comes out of CPH. An owner can sells a permit separate from history, putting the history into CPH.  If this happens there may be 2 links between a right_id and a permit. The actual one is the one NOT IN CPH.  ;
+{res}{txt}
+{com}. notes: CategoryA DAS are the "BASE"+"CARRYOVER" + "SANCTION" Days-at-Sea.  2004-2005 are from the DAS 2006-2008 are from DAS2 schema, 2009-present are from AMS.;
 {res}{txt}
 {com}. drop _merge;
 {txt}
@@ -595,367 +3115,209 @@ Number of obs.                 {res}    3560   {txt}->{res}   60520
 (saving in Stata 12 format, which can be read
 by Stata 11 or 12)
 {p_end}
-file /home/mlee/Documents/projects/Birkenbach/data_folder/mqrs_annual_2017_01_18.dta saved
+{p 0 4 2}
+file {bf}
+C:/Users/Min-Yang.Lee/Documents/MAM2/data_folder/mqrs_annual_2023_08_09.dta{rm}
+saved
+{p_end}
 
 {com}. 
 {txt}end of do-file
 
 {com}. /* Get the sector rosters and ACE holdings */
+> 
+> 
 > do "roster_extractions.do";
 {txt}
 {com}. #delimit;
 {txt}delimiter now ;
-{com}.         clear;
+{com}. clear;
 {txt}
-{com}.         odbc load, exec("select * from MQRS.SECTOR_PARTICIPANTS_CPH;")  $oracle_cxn;
+{com}. odbc load, exec("select * from sector.mv_mri_permit_vessel_history where latest_entry_by_year='Y';") $oracle_cxn;
 {txt}
-{com}.         gen dbyear=2010;
-{txt}
-{com}.                   tempfile mm;
-{txt}
-{com}. save `mm';
-{txt}file /tmp/St21496.000001 saved
-
-{com}. forvalues yr=$secondyr/$lastyr{c -(} ;
-{txt}  2{com}.         tempfile posfix;
-{txt}  3{com}.         local NEWpos`"`NEWpos'"`posfix'" "'  ;
-{txt}  4{com}.         clear;
-{txt}  5{com}.         odbc load, exec("select * from MQRS.SECTOR_PARTICIPANTS_CPH`yr';")  $oracle_cxn;
-{txt}  6{com}.                         gen fishingyear= `yr';
-{txt}  7{com}.         quietly save `posfix';
-{txt}  8{com}. {c )-};
-{txt}
-{com}. dsconcat `NEWpos' `mm';
-{txt}
-{com}. destring, replace;
-{txt}mri already numeric; no {res}replace
-{txt}sims_sector_id already numeric; no {res}replace
-{txt}sector_name contains nonnumeric characters; no {res}replace
-{txt}ves_name contains nonnumeric characters; no {res}replace
-{txt}permit already numeric; no {res}replace
-{txt}auth_type contains nonnumeric characters; no {res}replace
-{txt}hullid contains nonnumeric characters; no {res}replace
-{txt}owner contains nonnumeric characters; no {res}replace
-{txt}strt1 contains nonnumeric characters; no {res}replace
-{txt}strt2 contains nonnumeric characters; no {res}replace
-{txt}city contains nonnumeric characters; no {res}replace
-{txt}st contains nonnumeric characters; no {res}replace
-{txt}zip contains nonnumeric characters; no {res}replace
-{txt}fishingyear already numeric; no {res}replace
-{txt}dbyear already numeric; no {res}replace
-{txt}
-{com}. compress;
-  {txt}variable {bf}mri{sf} was {bf}{res}double{sf}{txt} now {bf}{res}long{sf}
-  {txt}variable {bf}sims_sector_id{sf} was {bf}{res}double{sf}{txt} now {bf}{res}byte{sf}
-  {txt}variable {bf}permit{sf} was {bf}{res}double{sf}{txt} now {bf}{res}long{sf}
-  {txt}variable {bf}fishingyear{sf} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
-  {txt}variable {bf}dbyear{sf} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
-{txt}  (263,466 bytes saved)
-
-{com}. notes: made by "roster_extractions_do" ;
+{com}. rename fy_year fishingyear;
 {res}{txt}
+{com}. rename sector_id sims_sector_id;
+{res}{txt}
+{com}. rename vessel_name ves_name;
+{res}{txt}
+{com}. rename vessel_permit_num permit;
+{res}{txt}
+{com}. rename vessel_hull_id hullid;
+{res}{txt}
+{com}. order fishingyear mri sims_sector_id sector_name ves_name permit auth_type hullid;
+{txt}
+{com}.  /* a few duplicates */
+> bysort fishingyear mri (start_date): gen obsno=_n;
+{txt}
+{com}. count if obsno>=2;
+  {res}5
+{txt}
+{com}. assert r(N)==5;
+{txt}
+{com}. drop if obsno==2;
+{txt}(5 observations deleted)
+
+{com}. drop obsno;
+{txt}
 {com}. saveold $my_workdir/sector_participants_$today_date_string.dta, replace version(12);
 {txt}{p 0 1 2}
 (saving in Stata 12 format, which can be read
 by Stata 11 or 12)
 {p_end}
-file /home/mlee/Documents/projects/Birkenbach/data_folder/sector_participants_2017_01_18.dta saved
-
-{com}. forvalues yr=$firstyr/$lastyr{c -(} ;
-{txt}  2{com}.         tempfile roster;
-{txt}  3{com}.         local NEWroster`"`NEWroster'"`roster'" "'  ;
-{txt}  4{com}.         clear;
-{txt}  5{com}.         odbc load, exec("select * from MQRS.SECTOR_YEAR_ROSTER`yr';")  $oracle_cxn;
-{txt}  6{com}.                         gen fishingyear= `yr';
-{txt}  7{com}.         quietly save `roster';
-{txt}  8{com}. {c )-};
-{txt}
-{com}. dsconcat `NEWroster';
-{txt}
-{com}. destring, replace;
-{txt}sector_id already numeric; no {res}replace
-{txt}year already numeric; no {res}replace
-{txt}mri already numeric; no {res}replace
-{txt}start_date already numeric; no {res}replace
-{txt}ue contains nonnumeric characters; no {res}replace
-{txt}de already numeric; no {res}replace
-{txt}end_date already numeric; no {res}replace
-{txt}end_reason contains nonnumeric characters; no {res}replace
-{txt}uc contains nonnumeric characters; no {res}replace
-{txt}dc already numeric; no {res}replace
-{txt}dsm_id already numeric; no {res}replace
-{txt}fishingyear already numeric; no {res}replace
-{txt}
-{com}. compress;
-  {txt}variable {bf}sector_id{sf} was {bf}{res}double{sf}{txt} now {bf}{res}byte{sf}
-  {txt}variable {bf}year{sf} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
-  {txt}variable {bf}mri{sf} was {bf}{res}double{sf}{txt} now {bf}{res}long{sf}
-  {txt}variable {bf}dsm_id{sf} was {bf}{res}double{sf}{txt} now {bf}{res}byte{sf}
-  {txt}variable {bf}fishingyear{sf} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
-{txt}  (309,750 bytes saved)
-
-{com}. notes: made by "roster_extractions_do" ;
-{res}{txt}
-{com}. saveold $my_workdir/sector_year_roster$today_date_string.dta, replace version(12);
-{txt}{p 0 1 2}
-(saving in Stata 12 format, which can be read
-by Stata 11 or 12)
+{p 0 4 2}
+file {bf}
+C:/Users/Min-Yang.Lee/Documents/MAM2/data_folder/sector_participants_2023_08_09.dta{rm}
+saved
 {p_end}
-file /home/mlee/Documents/projects/Birkenbach/data_folder/sector_year_roster2017_01_18.dta saved
 
-{com}. 
+{com}. /* old code
+> 
+>         clear;
+>         odbc load, exec("select * from MQRS.SECTOR_PARTICIPANTS_CPH;")  $oracle_cxn;  
+>         gen dbyear=2010;                  
+> tempfile mm;
+> save `mm';
+> 
+> forvalues yr=$secondyr/2019{c -(} ;
+>         tempfile posfix;
+>         local NEWpos`"`NEWpos'"`posfix'" "'  ;
+>         clear;
+>         odbc load, exec("select * from MQRS.SECTOR_PARTICIPANTS_CPH`yr';")  $oracle_cxn;                    
+>         gen fishingyear= `yr';
+>         quietly save `posfix';
+> {c )-};
+> dsconcat `NEWpos' `mm';
+> destring, replace;
+> compress;
+> notes: made by "roster_extractions_do" ;
+> saveold $my_workdir/sector_participants_$today_date_string.dta, replace version(12);
+> 
+> 
+> 
+> 
+> forvalues yr=$firstyr/2019{c -(} ;
+>         tempfile roster;
+>         local NEWroster`"`NEWroster'"`roster'" "'  ;
+>         clear;
+>         odbc load, exec("select * from MQRS.SECTOR_YEAR_ROSTER`yr';")  $oracle_cxn;                    
+>         gen fishingyear= `yr';
+>         quietly save `roster';
+> {c )-};
+> dsconcat `NEWroster';
+> destring, replace;
+> compress;
+> notes: made by "roster_extractions_do" ;
+> saveold $my_workdir/sector_year_roster$today_date_string.dta, replace version(12);
+>  */
+
 {txt}end of do-file
 
 {com}. do "psc_extractor.do";
 {txt}
 {com}. #delimit;
 {txt}delimiter now ;
-{com}. local firstpsc 2010;
+{com}. clear;
 {txt}
-{com}. local lastpsc 2016;
+{com}. odbc load, exec("select * from sector.ace_mri_as_pounds;") $oracle_cxn;
 {txt}
-{com}. foreach yr of numlist `firstpsc'(1)`lastpsc'{c -(};
-{txt}  2{com}.         clear;
-{txt}  3{com}.         tempfile mypsc;
-{txt}  4{com}.         local pscHold`"`pscHold'"`mypsc'" "'  ;
-{txt}  5{com}.         import delimited "https://www.greateratlantic.fisheries.noaa.gov/ro/fso/reports/Sectors/PSC/psc_lbs_`yr'.csv";
-{txt}  6{com}.         quietly save `mypsc';
-{txt}  7{com}. {c )-};
-{res}{text}(18 vars, 1,475 obs)
-{res}{text}(18 vars, 1,475 obs)
-{res}{text}(18 vars, 1,408 obs)
-{res}{text}(18 vars, 1,380 obs)
-{res}{text}(18 vars, 1,373 obs)
-{res}{text}(18 vars, 1,360 obs)
-{res}{text}(18 vars, 1,346 obs)
-
-{com}. dsconcat `pscHold';
-{txt}
-{com}. replace sector=ltrim(rtrim(itrim(sector)));
-{txt}(9,817 real changes made)
-
-{com}. gen sims_sector_id=.;
-{txt}(9,817 missing values generated)
-
-{com}. replace sims_sector_id=2 if strmatch(sector,"CP")==1;
-{txt}(4,003 real changes made)
-
-{com}. replace sims_sector_id=3 if strmatch(sector,"FGS")==1;
-{txt}(741 real changes made)
-
-{com}. replace sims_sector_id=6 if strmatch(sector,"MCCS")==1;
-{txt}(184 real changes made)
-
-{com}. replace sims_sector_id=6 if strmatch(sector,"PCS")==1;
-{txt}(125 real changes made)
-
-{com}. replace sims_sector_id=5 if strmatch(sector,"SHS1")==1;
-{txt}(630 real changes made)
-
-{com}. replace sims_sector_id=7 if strmatch(sector,"NEFS 7")==1;
-{txt}(160 real changes made)
-
-{com}. replace sims_sector_id=8 if strmatch(sector,"NEFS 4")==1;
-{txt}(336 real changes made)
-
-{com}. replace sims_sector_id=9 if strmatch(sector,"NEFS 8")==1;
-{txt}(136 real changes made)
-
-{com}. replace sims_sector_id=10 if strmatch(sector,"NEFS 11")==1;
-{txt}(342 real changes made)
-
-{com}. replace sims_sector_id=11 if strmatch(sector,"NEFS 12")==1;
-{txt}(59 real changes made)
-
-{com}. replace sims_sector_id=12 if strmatch(sector,"NEFS 2")==1;
-{txt}(568 real changes made)
-
-{com}. replace sims_sector_id=13 if strmatch(sector,"NEFS 3")==1;
-{txt}(541 real changes made)
-
-{com}. replace sims_sector_id=14 if strmatch(sector,"NEFS 1")==1;
-{txt}(9 real changes made)
-
-{com}. replace sims_sector_id=15 if strmatch(sector,"NEFS 10")==1;
-{txt}(303 real changes made)
-
-{com}. replace sims_sector_id=16 if strmatch(sector,"NEFS 13")==1;
-{txt}(323 real changes made)
-
-{com}. replace sims_sector_id=17 if strmatch(sector,"NEFS 9")==1;
-{txt}(412 real changes made)
-
-{com}. replace sims_sector_id=18 if strmatch(sector,"NEFS 5")==1;
-{txt}(217 real changes made)
-
-{com}. replace sims_sector_id=19 if strmatch(sector,"TSS")==1;
-{txt}(56 real changes made)
-
-{com}. replace sims_sector_id=20 if strmatch(sector,"NEFS 6")==1;
-{txt}(143 real changes made)
-
-{com}. replace sims_sector_id=21 if strmatch(sector,"NCCS")==1;
-{txt}(180 real changes made)
-
-{com}. replace sims_sector_id=22 if strmatch(sector,"SHS3")==1;
-{txt}(251 real changes made)
-
-{com}. replace sims_sector_id=23 if strmatch(sector,"MPBS")==1;
-{txt}(8 real changes made)
-
-{com}. replace sims_sector_id=24 if strmatch(sector,"MPB")==1;
-{txt}(55 real changes made)
-
-{com}. replace sims_sector_id=25 if strmatch(sector,"NHPB")==1;
-{txt}(20 real changes made)
-
-{com}. replace sims_sector_id=26 if strmatch(sector,"SHS2")==1;
-{txt}(15 real changes made)
-
-{com}. rename sector sector_abbreviation;
+{com}. rename year fishingyear;
 {res}{txt}
-{com}. notes sims_sector_id: The Port Clyde Community sector was renamed the Maine Coast Community Sector in FY2013.;
-{res}{txt}
-{com}. egen total_pounds=rowtotal(gbcod-pollock);
+{com}. renvars *_ace, postsub("_ace" "");
 {txt}
-{com}. saveold $my_workdir/psc_from`firstpsc'_to`lastpsc'_$today_date_string.dta, replace version(12);
-{txt}{p 0 1 2}
-(saving in Stata 12 format, which can be read
-by Stata 11 or 12)
-{p_end}
-file /home/mlee/Documents/projects/Birkenbach/data_folder/psc_from2010_to2016_2017_01_18.dta saved
-
-{com}. rename fishingyear fishing_year;
-{res}{txt}
-{com}. merge 1:1 mri fishing_year using $my_workdir/mqrs_annual_$today_date_string.dta, keep(1 3);
+{com}. /* strip off the _ACE stub*/ 
+> 
+> 
+> /* old code 
+> local firstpsc 2010;
+> local lastpsc 2021;
+> foreach yr of numlist `firstpsc'(1)`lastpsc'{c -(};
+>         clear;
+>         tempfile mypsc;
+>         local pscHold`"`pscHold'"`mypsc'" "'  ;
+> 
+>         import delimited "https://www.greateratlantic.fisheries.noaa.gov/ro/fso/reports/Sectors/PSC/psc_lbs_`yr'.csv";
+>         quietly save `mypsc';
+> {c )-};
+> 
+> dsconcat `pscHold';
+> replace sector=ltrim(rtrim(itrim(sector)));
+> gen sims_sector_id=.;
+> replace sims_sector_id=2 if strmatch(sector,"CP")==1;
+> replace sims_sector_id=3 if strmatch(sector,"FGS")==1;
+> replace sims_sector_id=6 if strmatch(sector,"MCCS")==1;
+> replace sims_sector_id=6 if strmatch(sector,"PCS")==1;
+> replace sims_sector_id=5 if strmatch(sector,"SHS1")==1;
+> replace sims_sector_id=7 if strmatch(sector,"NEFS 7")==1;
+> replace sims_sector_id=8 if strmatch(sector,"NEFS 4")==1;
+> replace sims_sector_id=9 if strmatch(sector,"NEFS 8")==1;
+> replace sims_sector_id=10 if strmatch(sector,"NEFS 11")==1;
+> replace sims_sector_id=11 if strmatch(sector,"NEFS 12")==1;
+> replace sims_sector_id=12 if strmatch(sector,"NEFS 2")==1;
+> replace sims_sector_id=13 if strmatch(sector,"NEFS 3")==1;
+> replace sims_sector_id=14 if strmatch(sector,"NEFS 1")==1;
+> replace sims_sector_id=15 if strmatch(sector,"NEFS 10")==1;
+> 
+> replace sims_sector_id=16 if strmatch(sector,"NEFS 13")==1;
+> replace sims_sector_id=17 if strmatch(sector,"NEFS 9")==1;
+> replace sims_sector_id=18 if strmatch(sector,"NEFS 5")==1;
+> replace sims_sector_id=19 if strmatch(sector,"TSS")==1;
+> replace sims_sector_id=20 if strmatch(sector,"NEFS 6")==1;
+> 
+> 
+> replace sims_sector_id=21 if strmatch(sector,"NCCS")==1;
+> replace sims_sector_id=22 if strmatch(sector,"SHS3")==1;
+> replace sims_sector_id=23 if strmatch(sector,"MPBS")==1;
+> replace sims_sector_id=24 if strmatch(sector,"MPB")==1;
+> 
+> 
+> 
+> replace sims_sector_id=25 if strmatch(sector,"NHPB")==1;
+> replace sims_sector_id=26 if strmatch(sector,"SHS2")==1;
+> 
+> assert sims_sector_id~=.;
+> 
+> rename sector sector_abbreviation;
+> notes sims_sector_id: The Port Clyde Community sector was renamed the Maine Coast Community Sector in FY2013.;
+> egen total_pounds=rowtotal(gbcod-pollock);
+> saveold $my_workdir/psc_from`firstpsc'_to`lastpsc'_$today_date_string.dta, replace version(12);
+> 
+> rename fishingyear fishing_year;
+> merge 1:1 mri fishing_year using $my_workdir/mqrs_annual_$today_date_string.dta, keep(1 3);
+> 
+> */
+> 
+> merge 1:1 mri fishingyear using $my_workdir/sector_participants_$today_date_string.dta, keep(1 3);
 {res}
-{txt}{col 5}Result{col 38}# of obs.
+{txt}{col 5}Result{col 33}Number of obs
 {col 5}{hline 41}
-{col 5}not matched{col 30}{res}              10
-{txt}{col 9}from master{col 30}{res}              10{txt}  (_merge==1)
+{col 5}Not matched{col 30}{res}           1,284
+{txt}{col 9}from master{col 30}{res}           1,284{txt}  (_merge==1)
 {col 9}from using{col 30}{res}               0{txt}  (_merge==2)
 
-{col 5}matched{col 30}{res}           9,807{txt}  (_merge==3)
+{col 5}Matched{col 30}{res}          17,571{txt}  (_merge==3)
 {col 5}{hline 41}
 
-{com}. rename _merge merge_psc_to_mqrs;
-{res}{txt}
-{com}. notes: merge_psc_to_mqrs is the merge variable for psc to mqrs;
-{res}{txt}
 {com}. saveold $my_workdir/psc_processed_$today_date_string.dta, replace version(12);
 {txt}{p 0 1 2}
 (saving in Stata 12 format, which can be read
 by Stata 11 or 12)
 {p_end}
-file /home/mlee/Documents/projects/Birkenbach/data_folder/psc_processed_2017_01_18.dta saved
-
-{com}. 
-{txt}end of do-file
-
-{com}. do "ace_transfers.do";
-{txt}
-{com}. #delimit;
-{txt}delimiter now ;
-{com}. tempfile t1 t2;
-{txt}
-{com}.         clear;
-{txt}
-{com}.         odbc load, exec("select * from sector.transfers;")  $oracle_cxn;
-{txt}
-{com}.   save `t1', replace;
-{txt}(note: file /tmp/St21496.000001 not found)
-file /tmp/St21496.000001 saved
-
-{com}. #delimit;
-{txt}delimiter now ;
-{com}.         clear;
-{txt}
-{com}.         odbc load, exec("select * from sector.transfer_stock;")  $oracle_cxn;
-{txt}
-{com}.   save `t2', replace;
-{txt}(note: file /tmp/St21496.000002 not found)
-file /tmp/St21496.000002 saved
-
-{com}. use `t1';
-{txt}
-{com}. merge 1:m transfer_number using `t2', keep(2 3);
-{res}
-{txt}{col 5}Result{col 38}# of obs.
-{col 5}{hline 41}
-{col 5}not matched{col 30}{res}               0
-{txt}{col 5}matched{col 30}{res}           7,845{txt}  (_merge==3)
-{col 5}{hline 41}
-
-{com}. assert _merge==3;
-{txt}
-{com}. drop _merge;
-{txt}
-{com}. /* Probably want to keep status=C only! Completed, denied, pending, X*/
-> keep if status=="C";
-{txt}(369 observations deleted)
-
-{com}. drop if transfer_number==3369;
-{txt}(1 observation deleted)
-
-{com}. replace stock=subinstr(stock,"_"," ",.);
-{txt}(4,057 real changes made)
-
-{com}. gen stock_area="All Areas";
-{txt}
-{com}. replace stock_area="GB" if strmatch(stock,"GB*");
-{txt}(1,834 real changes made)
-
-{com}. replace stock_area="GBE" if strmatch(stock,"GB*East");
-{txt}(542 real changes made)
-
-{com}. replace stock_area="GBW" if strmatch(stock,"GB*West");
-{txt}(826 real changes made)
-
-{com}. replace stock_area="CC/GOM" if strmatch(stock,"CC/GOM*");
-{txt}(694 real changes made)
-
-{com}. replace stock_area="GOM" if strmatch(stock,"GOM*");
-{txt}(1,679 real changes made)
-
-{com}. replace stock_area="SNE/MA" if strmatch(stock,"SNE/MA");
-{txt}(0 real changes made)
-
-{com}. gen species="Cod" if strmatch(stock,"*Cod*");
-{txt}(5,536 missing values generated)
-
-{com}. replace species="Haddock" if strmatch(stock,"*Haddock*");
-{txt}variable {bf}species{sf} was {bf}{res}str3{sf}{txt} now {bf}{res}str7{sf}
-{txt}(826 real changes made)
-
-{com}. replace species="Yellowtail Flounder" if strmatch(stock,"*Yellowtail Flounder*");
-{txt}variable {bf}species{sf} was {bf}{res}str7{sf}{txt} now {bf}{res}str19{sf}
-{txt}(1,376 real changes made)
-
-{com}. replace species="Winter Flounder" if strmatch(stock,"*Winter Flounder*");
-{txt}(724 real changes made)
-
-{com}. replace species="White Hake" if strmatch(stock,"*White Hake*");
-{txt}(534 real changes made)
-
-{com}. replace species="Witch Flounder" if strmatch(stock,"*Witch Flounder*");
-{txt}(809 real changes made)
-
-{com}. replace species=stock if wordcount(stock)==1;
-{txt}(1,267 real changes made)
-
-{com}. drop transfer_app transfer_ack transfer_init status;
-{txt}
-{com}. saveold $my_workdir/sector_transfers_$today_date_string.dta, replace version(12);
-{txt}{p 0 1 2}
-(saving in Stata 12 format, which can be read
-by Stata 11 or 12)
+{p 0 4 2}
+file {bf}
+C:/Users/Min-Yang.Lee/Documents/MAM2/data_folder/psc_processed_2023_08_09.dta{rm}
+saved
 {p_end}
-file /home/mlee/Documents/projects/Birkenbach/data_folder/sector_transfers_2017_01_18.dta saved
 
 {com}. 
 {txt}end of do-file
 
-{com}. /* Get VTR data at the gearid level */
+{com}. /*
+> do "ace_transfers.do";
+> */
+> 
+> 
+> /* Get VTR data at the gearid level */
 > do "veslog_gearid.do";
 {txt}
 {com}. #delimit;
@@ -973,8 +3335,8 @@ file /home/mlee/Documents/projects/Birkenbach/data_folder/sector_transfers_2017_
 {txt}gearid already numeric; no {res}replace
 {txt}tripid already numeric; no {res}replace
 {txt}subtrip already numeric; no {res}replace
-{txt}serial_num contains nonnumeric characters; no {res}replace
-{txt}gearcode contains nonnumeric characters; no {res}replace
+{txt}serial_num: contains nonnumeric characters; no {res}replace
+{txt}gearcode: contains nonnumeric characters; no {res}replace
 {txt}mesh already numeric; no {res}replace
 {txt}gearqty already numeric; no {res}replace
 {txt}gearsize already numeric; no {res}replace
@@ -991,18 +3353,18 @@ file /home/mlee/Documents/projects/Birkenbach/data_folder/sector_transfers_2017_
 {txt}dbyear already numeric; no {res}replace
 {txt}
 {com}.         compress;
-  {txt}variable {bf}dbyear{sf} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
-{txt}  (9,207,972 bytes saved)
+  {txt}variable {bf}{res}dbyear{sf}{txt} was {bf}{res}float{sf}{txt} now {bf}{res}int{sf}
+{txt}  (5,649,044 bytes saved)
 
 {com}. compress;
 {txt}  (0 bytes saved)
 
-{com}. saveold $my_workdir/veslog_G$today_date_string.dta, replace version(12);
-{txt}{p 0 1 2}
-(saving in Stata 12 format, which can be read
-by Stata 11 or 12)
+{com}. save $my_workdir/veslog_G$today_date_string.dta, replace ;
+{txt}{p 0 4 2}
+file {bf}
+C:/Users/Min-Yang.Lee/Documents/MAM2/data_folder/veslog_G2023_08_09.dta{rm}
+saved
 {p_end}
-file /home/mlee/Documents/projects/Birkenbach/data_folder/veslog_G2017_01_18.dta saved
 
 {com}. quietly forvalues yr=$firstders/$lastyr{c -(};
 {txt}
@@ -1016,39 +3378,44 @@ file /home/mlee/Documents/projects/Birkenbach/data_folder/veslog_G2017_01_18.dta
 {txt}gearid already numeric; no {res}replace
 {txt}tripid already numeric; no {res}replace
 {txt}subtrip already numeric; no {res}replace
-{txt}sppcode contains nonnumeric characters; no {res}replace
+{txt}sppcode: contains nonnumeric characters; no {res}replace
 {txt}qtykept already numeric; no {res}replace
 {txt}qtydisc already numeric; no {res}replace
 {txt}dealnum already numeric; no {res}replace
-{txt}dealname contains nonnumeric characters; no {res}replace
+{txt}dealname: contains nonnumeric characters; no {res}replace
 {txt}datesold already numeric; no {res}replace
 {txt}dbyear already numeric; no {res}replace
 {txt}
 {com}.         compress;
-  {txt}variable {bf}dbyear{sf} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
-{txt}  (26,452,782 bytes saved)
+  {txt}variable {bf}{res}dbyear{sf}{txt} was {bf}{res}float{sf}{txt} now {bf}{res}int{sf}
+{txt}  (16,262,470 bytes saved)
 
 {com}. compress;
 {txt}  (0 bytes saved)
 
-{com}. saveold $my_workdir/veslog_S$today_date_string.dta, replace version(12);
-{txt}{p 0 1 2}
-(saving in Stata 12 format, which can be read
-by Stata 11 or 12)
+{com}. save $my_workdir/veslog_S$today_date_string.dta, replace ;
+{txt}{p 0 4 2}
+file {bf}
+C:/Users/Min-Yang.Lee/Documents/MAM2/data_folder/veslog_S2023_08_09.dta{rm}
+saved
 {p_end}
-file /home/mlee/Documents/projects/Birkenbach/data_folder/veslog_S2017_01_18.dta saved
 
 {com}. /* Read in the tripids and corrected ports from our processed data, dro out some extraneous stuff.  I'll do a "merge update" to fill in portlnd1 and state1, treating the  processed data as correct if it exists
 > 
 > It may not match if either there were no landings or
+> use "/home/mlee/Documents/projects/spacepanels/scallop/spatial_project_10192017/veslog_species_huge.dta", clear;
+> 
 > */
-> use "/home/mlee/Documents/projects/spacepanels/scallop/spatial_project_08052016/veslog_species_huge.dta", clear;
+> 
+> #delimit ;
+{txt}delimiter now ;
+{com}. use "$spacepanels_data", clear;
 {txt}
 {com}. drop if tripid==.;
-{txt}(114,803 observations deleted)
+{txt}(45,427 observations deleted)
 
 {com}. drop if dbyear<=2002;
-{txt}(2,422,283 observations deleted)
+{txt}(2,422,278 observations deleted)
 
 {com}. keep tripid portlnd1 state1 geoid namelsad ;
 {txt}
@@ -1056,23 +3423,32 @@ file /home/mlee/Documents/projects/Birkenbach/data_folder/veslog_S2017_01_18.dta
 
 {txt}group by:{res} tripid state1 portlnd1 geoid namelsad
 
-{txt}groups formed: {res}659032
+{txt}groups formed: {res}872831
 
-{txt}total observations:{res}3668785
-{txt}  in duplicates    {res}2945526
-{txt}  in unique        {res}723259
+{txt}total observations:{res}5027166
+{txt}  in duplicates    {res}3924860
+{txt}  in unique        {res}1102306
 
-{txt}(2,286,494 observations deleted)
+{txt}(3,052,029 observations deleted)
 
-observations remaining: {res}1382291
+observations remaining: {res}1975137
 {txt}
 {com}. tempfile tports;
 {txt}
 {com}. drop _expand;
 {txt}
 {com}. save `tports', replace;
-{txt}(note: file /tmp/St21496.00000t not found)
-file /tmp/St21496.00000t saved
+{txt}{p 0 4 2}
+(file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_00001j.tmp{rm}
+not found)
+{p_end}
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_00001j.tmp{rm}
+saved
+as .dta format
+{p_end}
 
 {com}. quietly forvalues yr=$firstders/$lastyr{c -(};
 {txt}
@@ -1084,44 +3460,61 @@ file /tmp/St21496.00000t saved
 {com}.         destring, replace       ;
 {txt}tripid already numeric; no {res}replace
 {txt}nsubtrip already numeric; no {res}replace
-{txt}hullnum contains nonnumeric characters; no {res}replace
+{txt}hullnum: contains nonnumeric characters; no {res}replace
 {txt}permit already numeric; no {res}replace
 {txt}datesail already numeric; no {res}replace
 {txt}tripcatg already numeric; no {res}replace
 {txt}crew already numeric; no {res}replace
 {txt}datelnd1 already numeric; no {res}replace
-{txt}operator contains nonnumeric characters; no {res}replace
+{txt}operator: contains nonnumeric characters; no {res}replace
 {txt}opernum already numeric; no {res}replace
-{txt}raw_portlnd1 contains nonnumeric characters; no {res}replace
-{txt}raw_state1 contains nonnumeric characters; no {res}replace
+{txt}raw_portlnd1: contains nonnumeric characters; no {res}replace
+{txt}raw_state1: contains nonnumeric characters; no {res}replace
 {txt}dbyear already numeric; no {res}replace
 {txt}
 {com}.         compress;
-  {txt}variable {bf}dbyear{sf} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
-{txt}  (8,913,396 bytes saved)
+  {txt}variable {bf}{res}dbyear{sf}{txt} was {bf}{res}float{sf}{txt} now {bf}{res}int{sf}
+{txt}  (5,468,530 bytes saved)
 
 {com}. compress;
 {txt}  (0 bytes saved)
 
+{com}. /*there's two trips that get filed into the wrong place */
+> drop if tripid==4864477 & dbyear==2015;
+{txt}(1 observation deleted)
+
+{com}. /* this one is actually in 2017 */
+> drop if tripid==4959274 & dbyear==2018;
+{txt}(1 observation deleted)
+
+{com}. replace datesail=clock("21mar2017 16:30:00", "DMY hms") if tripid==4959274 & dbyear==2016;
+{txt}(1 real change made)
+
+{com}. replace datelnd1=clock("22mar2017 06:00:00", "DMY hms") if tripid==4959274 & dbyear==2016;
+{txt}(1 real change made)
+
+{com}. replace dbyear=2017 if tripid==4959274 & dbyear==2016;
+{txt}(1 real change made)
+
 {com}. merge 1:1 tripid using `tports', keep(1 3);
 {res}
-{txt}{col 5}Result{col 38}# of obs.
+{txt}{col 5}Result{col 33}Number of obs
 {col 5}{hline 41}
-{col 5}not matched{col 30}{res}         103,288
-{txt}{col 9}from master{col 30}{res}         103,288{txt}  (_merge==1)
+{col 5}Not matched{col 30}{res}         851,652
+{txt}{col 9}from master{col 30}{res}         851,652{txt}  (_merge==1)
 {col 9}from using{col 30}{res}               0{txt}  (_merge==2)
 
-{col 5}matched{col 30}{res}       1,382,278{txt}  (_merge==3)
+{col 5}Matched{col 30}{res}       1,882,611{txt}  (_merge==3)
 {col 5}{hline 41}
 
 {com}. drop _merge;
 {txt}
-{com}. saveold $my_workdir/veslog_T$today_date_string.dta, replace version(12);
-{txt}{p 0 1 2}
-(saving in Stata 12 format, which can be read
-by Stata 11 or 12)
+{com}. save $my_workdir/veslog_T$today_date_string.dta, replace ;
+{txt}{p 0 4 2}
+file {bf}
+C:/Users/Min-Yang.Lee/Documents/MAM2/data_folder/veslog_T2023_08_09.dta{rm}
+saved
 {p_end}
-file /home/mlee/Documents/projects/Birkenbach/data_folder/veslog_T2017_01_18.dta saved
 
 {com}. 
 {txt}end of do-file
@@ -1136,22 +3529,23 @@ file /home/mlee/Documents/projects/Birkenbach/data_folder/veslog_T2017_01_18.dta
 {com}. clear;
 {txt}
 {com}. odbc load, exec("select vp.ap_year, vp.ap_num, vp.vp_num, vp.plan, vp.cat, vp.start_date, vp.end_date, vp.date_expired, vp.date_canceled from vps_fishery_ner vp where 
->         ap_year>=1996
->     order by vp_num, ap_num;") conn("$mysole_conn") ;
+>         ap_year between 1996 and $lastyr
+>     order by vp_num, ap_num;") $oracle_cxn;
 {txt}
 {com}.     destring, replace;
-{txt}AP_YEAR already numeric; no {res}replace
-{txt}AP_NUM already numeric; no {res}replace
-{txt}VP_NUM already numeric; no {res}replace
-{txt}PLAN contains nonnumeric characters; no {res}replace
-{txt}CAT contains nonnumeric characters; no {res}replace
-{txt}START_DATE already numeric; no {res}replace
-{txt}END_DATE already numeric; no {res}replace
-{txt}DATE_EXPIRED already numeric; no {res}replace
-{txt}DATE_CANCELED already numeric; no {res}replace
+{txt}ap_year already numeric; no {res}replace
+{txt}ap_num already numeric; no {res}replace
+{txt}vp_num already numeric; no {res}replace
+{txt}plan: contains nonnumeric characters; no {res}replace
+{txt}cat: contains nonnumeric characters; no {res}replace
+{txt}start_date already numeric; no {res}replace
+{txt}end_date already numeric; no {res}replace
+{txt}date_expired already numeric; no {res}replace
+{txt}date_canceled already numeric; no {res}replace
 {txt}
 {com}.     renvars, lower;
-{txt}
+{txt}no renames necessary
+
 {com}.         gen mys=dofc(start_date);
 {txt}(149 missing values generated)
 
@@ -1162,7 +3556,7 @@ file /home/mlee/Documents/projects/Birkenbach/data_folder/veslog_T2017_01_18.dta
 {txt}(224 missing values generated)
 
 {com}.     gen mycanc=dofc(date_canceled);
-{txt}(701,621 missing values generated)
+{txt}(896,811 missing values generated)
 
 {com}.     format my* %td;
 {txt}
@@ -1182,14 +3576,18 @@ file /home/mlee/Documents/projects/Birkenbach/data_folder/veslog_T2017_01_18.dta
 {com}. format myde %td;
 {txt}
 {com}. drop if start_date>=myde | start_date>=myde;
-{txt}(51,905 observations deleted)
+{txt}(60,380 observations deleted)
 
 {com}. saveold $my_workdir/vps_fishery_raw_$today_date_string.dta, replace version(12);
 {txt}{p 0 1 2}
 (saving in Stata 12 format, which can be read
 by Stata 11 or 12)
 {p_end}
-file /home/mlee/Documents/projects/Birkenbach/data_folder/vps_fishery_raw_2017_01_18.dta saved
+{p 0 4 2}
+file {bf}
+C:/Users/Min-Yang.Lee/Documents/MAM2/data_folder/vps_fishery_raw_2023_08_09.dta{rm}
+saved
+{p_end}
 
 {com}. /*I want to make a dataset that contains the VP_NUM, FY, PLANS_CATS that were active in a FY */
 > 
@@ -1214,7 +3612,7 @@ file /home/mlee/Documents/projects/Birkenbach/data_folder/vps_fishery_raw_2017_0
 > 
 > 
 > 
-> forvalues j=1996(1)2016{c -(};
+> forvalues j=1996(1)$lastyr{c -(};
 {txt}  2{com}.         gen a`j'=0;
 {txt}  3{com}.         local k=`j'+1;
 {txt}  4{com}.         replace a`j'=1 if start_date<mdy(5,1,`k') & myde>=mdy(5,1,`j');
@@ -1233,16 +3631,22 @@ file /home/mlee/Documents/projects/Birkenbach/data_folder/vps_fishery_raw_2017_0
 (58,216 real changes made)
 (60,003 real changes made)
 (53,855 real changes made)
-(47,131 real changes made)
+(47,130 real changes made)
 (47,471 real changes made)
 (43,053 real changes made)
 (40,941 real changes made)
 (40,717 real changes made)
-(39,192 real changes made)
-(35,274 real changes made)
+(39,191 real changes made)
+(39,659 real changes made)
+(38,810 real changes made)
+(38,521 real changes made)
+(38,296 real changes made)
+(38,936 real changes made)
+(38,846 real changes made)
+(35,967 real changes made)
 
-{com}. collapse (sum) a1996-a2016, by(vp_num plan cat);
-{txt}
+{com}. collapse (sum) a1996-a$lastyr, by(vp_num plan cat);
+{res}{txt}
 {com}. foreach var of varlist a*{c -(};
 {txt}  2{com}.         replace `var'=1 if `var'>=1;
 {txt}  3{com}. {c )-};
@@ -1266,25 +3670,31 @@ file /home/mlee/Documents/projects/Birkenbach/data_folder/vps_fishery_raw_2017_0
 (4,554 real changes made)
 (4,844 real changes made)
 (4,503 real changes made)
-(2,181 real changes made)
+(4,656 real changes made)
+(4,233 real changes made)
+(3,817 real changes made)
+(3,892 real changes made)
+(4,112 real changes made)
+(3,692 real changes made)
+(1,911 real changes made)
 
 {com}. reshape long a, i(vp_num plan cat) j(fishing_year);
-{txt}(note: j = 1996 1997 1998 1999 2000 2001 2002 2003 2004 2005 2006 2007 2008 2009 2010 2011 2012 2013 2014 2015 2016)
+{txt}(j = 1996 1997 1998 1999 2000 2001 2002 2003 2004 2005 2006 2007 2008 2009 2010 2011 2012 2013 2014 2015 2016 2017 2018 2019 2020 2021 2022)
 
-Data{col 36}wide{col 43}->{col 48}long
+Data{col 36}Wide{col 43}->{col 48}Long
 {hline 77}
-Number of obs.                 {res}  130580   {txt}->{res} 2.7e+06
-{txt}Number of variables            {res}      24   {txt}->{res}       5
-{txt}j variable (21 values)                    ->   {res}fishing_year
+Number of observations     {res}     146,683   {txt}->   {res}3,960,441   
+{txt}Number of variables        {res}          30   {txt}->   {res}5           
+{txt}j variable (27 values)                    ->   {res}fishing_year
 {txt}xij variables:
-                  {res}a1996 a1997 ... a2016   {txt}->   {res}a
+                  {res}a1996 a1997 ... a2022   {txt}->   {res}a
 {txt}{hline 77}
 
 {com}. replace a=1 if a>=1;
 {txt}(0 real changes made)
 
 {com}. drop if a==0;
-{txt}(1,942,907 observations deleted)
+{txt}(2,954,661 observations deleted)
 
 {com}. /*save permits, replace; */
 > gen plancat=plan + "_" + cat;
@@ -1292,13 +3702,13 @@ Number of obs.                 {res}  130580   {txt}->{res} 2.7e+06
 {com}. drop plan cat;
 {txt}
 {com}. reshape wide a, i(vp_num fishing_year) j(plancat) string;
-{txt}(note: j = BLU_1 BLU_2 BSB_1 BSB_2 DOG_1 FLS_1 FLS_2 HER_1 HER_2 HER_3 HMS_1 HRG_A HRG_B HRG_C HRG_D HRG_E LGC_A LGC_B LGC_C LOI_A23 LOI_A3 LOI_A4 LOI_A5 LOT_A23 LOT_A3 LOT_A4 LOT_A5 LO_1 LO_2 LO_A1 LO_A2 LO_A23 LO_A3 LO_A4 LO_A5 LO_A5W LO_A6 LO_AOC MNK_A MNK_B MNK_C MNK_D MNK_E MNK_F MNK_H MUL_1 MUL_2 MUL_3 MUL_4 MUL_5 MUL_6 MUL_7 MUL_8 MUL_A MUL_B MUL_C MUL_D MUL_E MUL_F MUL_G MUL_H MUL_HA MUL_HB MUL_I MUL_J MUL_K NFO_1 OQ_6 OQ_7 RCB_A RCB_B RCB_C SCG_1 SCP_1 SCP_2 SC_2 SC_3 SC_4 SC_5 SC_6 SC_7 SC_8 SC_9 SF_1 SG_1A SG_1B SKT_1 SMB_1 SMB_2 SMB_3 SMB_4 SMB_5 SMB_T1 SMB_T2 SMB_T3 TLF_1 TLF_2 TLF_A TLF_B TLF_C TLF_D)
+{txt}(j = BLU_1 BLU_2 BSB_1 BSB_2 DOG_1 FLS_1 FLS_2 HER_1 HER_2 HER_3 HMS_1 HRG_A HRG_B HRG_C HRG_D HRG_E LGC_A LGC_B LGC_C LOI_A23 LOI_A3 LOI_A4 LOI_A5 LOT_A23 LOT_A3 LOT_A4 LOT_A5 LO_1 LO_2 LO_A1 LO_A2 LO_A23 LO_A3 LO_A4 LO_A5 LO_A5W LO_A6 LO_AOC MNK_A MNK_B MNK_C MNK_D MNK_E MNK_F MNK_H MUL_1 MUL_2 MUL_3 MUL_4 MUL_5 MUL_6 MUL_7 MUL_8 MUL_A MUL_B MUL_C MUL_D MUL_E MUL_F MUL_G MUL_H MUL_HA MUL_HB MUL_I MUL_J MUL_K NFO_1 OQ_6 OQ_7 RCB_A RCB_B RCB_C SCG_1 SCP_1 SCP_2 SC_2 SC_3 SC_4 SC_5 SC_6 SC_7 SC_8 SC_9 SF_1 SG_1A SG_1B SKT_1 SMB_1 SMB_1A SMB_1B SMB_1C SMB_2 SMB_3 SMB_4 SMB_5 SMB_6 SMB_T1 SMB_T2 SMB_T3 TLF_1 TLF_2 TLF_3 TLF_A TLF_B TLF_C TLF_D)
 
-Data{col 36}long{col 43}->{col 48}wide
+Data{col 36}Long{col 43}->{col 48}Wide
 {hline 77}
-Number of obs.                 {res}  799273   {txt}->{res}  115217
-{txt}Number of variables            {res}       4   {txt}->{res}     103
-{txt}j variable (101 values)         {res}plancat   {txt}->   (dropped)
+Number of observations     {res}   1,005,780   {txt}->   {res}144,367     
+{txt}Number of variables        {res}           4   {txt}->   {res}108         
+{txt}j variable (106 values)         {res}plancat   {txt}->   (dropped)
 xij variables:
                                       {res}a   {txt}->   {res}aBLU_1 aBLU_2 ... aTLF_D
 {txt}{hline 77}
@@ -1306,107 +3716,112 @@ xij variables:
 {com}. foreach var of varlist a*{c -(};
 {txt}  2{com}.         replace `var'=0 if `var'==.;
 {txt}  3{com}.         {c )-};
-{txt}(63,817 real changes made)
-(100,560 real changes made)
-(97,894 real changes made)
-(100,802 real changes made)
-(63,985 real changes made)
-(95,370 real changes made)
-(99,002 real changes made)
-(114,242 real changes made)
-(98,367 real changes made)
-(115,212 real changes made)
-(114,774 real changes made)
-(114,796 real changes made)
-(115,177 real changes made)
-(114,717 real changes made)
-(94,089 real changes made)
-(115,046 real changes made)
-(112,636 real changes made)
-(114,252 real changes made)
-(112,785 real changes made)
-(115,051 real changes made)
-(115,001 real changes made)
-(115,093 real changes made)
-(115,149 real changes made)
-(114,806 real changes made)
-(114,560 real changes made)
-(114,952 real changes made)
-(115,046 real changes made)
-(84,918 real changes made)
-(114,575 real changes made)
-(82,388 real changes made)
-(107,440 real changes made)
-(109,965 real changes made)
-(111,119 real changes made)
-(113,454 real changes made)
-(114,271 real changes made)
-(114,842 real changes made)
-(114,186 real changes made)
-(112,406 real changes made)
-(114,900 real changes made)
-(114,475 real changes made)
-(109,359 real changes made)
-(109,354 real changes made)
-(80,341 real changes made)
-(115,128 real changes made)
-(115,130 real changes made)
-(115,029 real changes made)
-(114,751 real changes made)
-(114,533 real changes made)
-(115,105 real changes made)
-(115,169 real changes made)
-(114,865 real changes made)
-(113,834 real changes made)
-(114,191 real changes made)
-(100,800 real changes made)
-(105,271 real changes made)
-(114,968 real changes made)
-(112,883 real changes made)
-(114,226 real changes made)
-(114,809 real changes made)
-(114,933 real changes made)
-(102,744 real changes made)
-(113,460 real changes made)
-(100,352 real changes made)
-(101,303 real changes made)
-(109,803 real changes made)
-(98,361 real changes made)
-(115,208 real changes made)
-(89,594 real changes made)
-(114,265 real changes made)
-(92,844 real changes made)
-(115,155 real changes made)
-(115,201 real changes made)
-(91,744 real changes made)
-(98,049 real changes made)
-(101,460 real changes made)
-(110,152 real changes made)
-(115,069 real changes made)
-(115,177 real changes made)
-(114,381 real changes made)
-(114,714 real changes made)
-(114,890 real changes made)
-(115,043 real changes made)
-(115,050 real changes made)
-(88,837 real changes made)
-(108,395 real changes made)
-(111,583 real changes made)
-(82,289 real changes made)
-(104,610 real changes made)
-(100,218 real changes made)
-(76,496 real changes made)
-(69,120 real changes made)
-(113,638 real changes made)
-(115,030 real changes made)
-(115,078 real changes made)
-(114,723 real changes made)
-(98,750 real changes made)
-(112,061 real changes made)
-(115,186 real changes made)
-(115,180 real changes made)
-(115,006 real changes made)
-(96,626 real changes made)
+{txt}(79,326 real changes made)
+(124,324 real changes made)
+(122,998 real changes made)
+(124,619 real changes made)
+(79,441 real changes made)
+(120,055 real changes made)
+(122,785 real changes made)
+(143,392 real changes made)
+(127,517 real changes made)
+(144,362 real changes made)
+(143,500 real changes made)
+(143,714 real changes made)
+(144,302 real changes made)
+(143,593 real changes made)
+(112,718 real changes made)
+(143,895 real changes made)
+(140,293 real changes made)
+(142,587 real changes made)
+(140,547 real changes made)
+(144,201 real changes made)
+(144,151 real changes made)
+(144,243 real changes made)
+(144,299 real changes made)
+(143,956 real changes made)
+(143,710 real changes made)
+(144,102 real changes made)
+(144,196 real changes made)
+(109,087 real changes made)
+(143,593 real changes made)
+(101,300 real changes made)
+(135,625 real changes made)
+(139,115 real changes made)
+(139,715 real changes made)
+(142,239 real changes made)
+(143,246 real changes made)
+(143,917 real changes made)
+(143,103 real changes made)
+(141,451 real changes made)
+(143,931 real changes made)
+(143,390 real changes made)
+(136,906 real changes made)
+(137,122 real changes made)
+(100,334 real changes made)
+(144,180 real changes made)
+(144,235 real changes made)
+(144,179 real changes made)
+(143,901 real changes made)
+(143,683 real changes made)
+(144,255 real changes made)
+(144,319 real changes made)
+(144,015 real changes made)
+(142,984 real changes made)
+(143,341 real changes made)
+(125,883 real changes made)
+(134,421 real changes made)
+(144,042 real changes made)
+(141,798 real changes made)
+(143,090 real changes made)
+(143,891 real changes made)
+(144,083 real changes made)
+(131,894 real changes made)
+(142,028 real changes made)
+(123,223 real changes made)
+(125,947 real changes made)
+(137,275 real changes made)
+(122,390 real changes made)
+(144,347 real changes made)
+(114,895 real changes made)
+(143,291 real changes made)
+(113,698 real changes made)
+(144,278 real changes made)
+(144,345 real changes made)
+(120,894 real changes made)
+(123,476 real changes made)
+(125,855 real changes made)
+(137,772 real changes made)
+(144,217 real changes made)
+(144,327 real changes made)
+(143,198 real changes made)
+(143,661 real changes made)
+(143,969 real changes made)
+(144,193 real changes made)
+(144,200 real changes made)
+(114,125 real changes made)
+(137,545 real changes made)
+(140,733 real changes made)
+(99,483 real changes made)
+(133,167 real changes made)
+(143,164 real changes made)
+(144,109 real changes made)
+(144,250 real changes made)
+(124,629 real changes made)
+(95,873 real changes made)
+(87,645 real changes made)
+(142,360 real changes made)
+(142,910 real changes made)
+(143,988 real changes made)
+(144,083 real changes made)
+(143,415 real changes made)
+(116,827 real changes made)
+(137,393 real changes made)
+(142,252 real changes made)
+(144,336 real changes made)
+(144,330 real changes made)
+(144,156 real changes made)
+(125,776 real changes made)
 
 {com}. renvars a*, predrop(1);
 {txt}
@@ -1421,7 +3836,11 @@ xij variables:
 (saving in Stata 12 format, which can be read
 by Stata 11 or 12)
 {p_end}
-file /home/mlee/Documents/projects/Birkenbach/data_folder/permit_working_2017_01_18.dta saved
+{p 0 4 2}
+file {bf}
+C:/Users/Min-Yang.Lee/Documents/MAM2/data_folder/permit_working_2023_08_09.dta{rm}
+saved
+{p_end}
 
 {com}. /* THIS BIT OF CODE IS USED TO EXTRACT VESSEL Characteristics*/
 > 
@@ -1429,46 +3848,47 @@ file /home/mlee/Documents/projects/Birkenbach/data_folder/permit_working_2017_01
 > clear;
 {txt}
 {com}. odbc load, exec("select ap_year, ap_num, vp_num, hull_id, ves_name, strt1, strt2, city, st, zip1, zip2, tel, hport, hpst, pport, ppst, len, crew, gtons, 
-> ntons, vhp, blt, hold, toc,top, date_issued, date_canceled
-> from vps_vessel where ap_year>=1996;") conn("$mysole_conn") ;
+> ntons, vhp, blt, hold, toc,top, date_issued, date_canceled, max_trap_limit
+> from vps_vessel where ap_year between 1996 and $lastyr;") $oracle_cxn;
 {txt}
 {com}.     destring, replace;
-{txt}AP_YEAR already numeric; no {res}replace
-{txt}AP_NUM already numeric; no {res}replace
-{txt}VP_NUM already numeric; no {res}replace
-{txt}HULL_ID contains nonnumeric characters; no {res}replace
-{txt}VES_NAME contains nonnumeric characters; no {res}replace
-{txt}STRT1 contains nonnumeric characters; no {res}replace
-{txt}STRT2 contains nonnumeric characters; no {res}replace
-{txt}CITY contains nonnumeric characters; no {res}replace
-{txt}ST contains nonnumeric characters; no {res}replace
-{txt}ZIP1 has all characters numeric; {res}replaced {txt}as {res}long
-{txt}ZIP2 has all characters numeric; {res}replaced {txt}as {res}int
-{txt}(132634 missing values generated)
-{res}{txt}TEL has all characters numeric; {res}replaced {txt}as {res}double
+{txt}ap_year already numeric; no {res}replace
+{txt}ap_num already numeric; no {res}replace
+{txt}vp_num already numeric; no {res}replace
+{txt}hull_id: contains nonnumeric characters; no {res}replace
+{txt}ves_name: contains nonnumeric characters; no {res}replace
+{txt}strt1: contains nonnumeric characters; no {res}replace
+{txt}strt2: contains nonnumeric characters; no {res}replace
+{txt}city: contains nonnumeric characters; no {res}replace
+{txt}st: contains nonnumeric characters; no {res}replace
+{txt}zip1: contains nonnumeric characters; no {res}replace
+{txt}zip2: contains nonnumeric characters; no {res}replace
+{txt}tel: all characters numeric; {res}replaced {txt}as {res}double
 {txt}(744 missing values generated)
-{res}{txt}HPORT contains nonnumeric characters; no {res}replace
-{txt}HPST contains nonnumeric characters; no {res}replace
-{txt}PPORT contains nonnumeric characters; no {res}replace
-{txt}PPST contains nonnumeric characters; no {res}replace
-{txt}LEN already numeric; no {res}replace
-{txt}CREW already numeric; no {res}replace
-{txt}GTONS already numeric; no {res}replace
-{txt}NTONS already numeric; no {res}replace
-{txt}VHP already numeric; no {res}replace
-{txt}BLT already numeric; no {res}replace
-{txt}HOLD already numeric; no {res}replace
-{txt}TOC already numeric; no {res}replace
-{txt}TOP already numeric; no {res}replace
-{txt}DATE_ISSUED already numeric; no {res}replace
-{txt}DATE_CANCELED already numeric; no {res}replace
+{res}{txt}hport: contains nonnumeric characters; no {res}replace
+{txt}hpst: contains nonnumeric characters; no {res}replace
+{txt}pport: contains nonnumeric characters; no {res}replace
+{txt}ppst: contains nonnumeric characters; no {res}replace
+{txt}len already numeric; no {res}replace
+{txt}crew already numeric; no {res}replace
+{txt}gtons already numeric; no {res}replace
+{txt}ntons already numeric; no {res}replace
+{txt}vhp already numeric; no {res}replace
+{txt}blt already numeric; no {res}replace
+{txt}hold already numeric; no {res}replace
+{txt}toc already numeric; no {res}replace
+{txt}top already numeric; no {res}replace
+{txt}date_issued already numeric; no {res}replace
+{txt}date_canceled already numeric; no {res}replace
+{txt}max_trap_limit already numeric; no {res}replace
 {txt}
 {com}.     renvars, lower;
-{txt}
+{txt}no renames necessary
+
 {com}.     gen mys=dofc(date_issued);
 {txt}
 {com}.     gen myend=dofc(date_canceled);
-{txt}(9,070 missing values generated)
+{txt}(6,778 missing values generated)
 
 {com}. drop date_issued date_canceled;
 {txt}
@@ -1481,10 +3901,19 @@ file /home/mlee/Documents/projects/Birkenbach/data_folder/permit_working_2017_01
 {com}. tempfile permit_working;
 {txt}
 {com}. save `permit_working', replace;
-{txt}(note: file /tmp/St21496.000001 not found)
-file /tmp/St21496.000001 saved
+{txt}{p 0 4 2}
+(file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000001.tmp{rm}
+not found)
+{p_end}
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000001.tmp{rm}
+saved
+as .dta format
+{p_end}
 
-{com}. forvalues j=1996(1)2016{c -(};
+{com}. forvalues j=1996(1)$lastyr{c -(};
 {txt}  2{com}.         tempfile new;
 {txt}  3{com}.         local NEWfiles `"`NEWfiles'"`new'" "'  ;
 {txt}  4{com}.         use `permit_working', clear;
@@ -1493,96 +3922,256 @@ file /tmp/St21496.000001 saved
 {txt}  7{com}.         replace a`j'=1 if date_issued<mdy(5,1,`k') & date_canceled>=mdy(5,1,`j');
 {txt}  8{com}.         bysort vp_num a`j' (ap_num): replace a`j'=0 if _n<_N;
 {txt}  9{com}.         keep if a`j'==1;
-{txt} 10{com}.         keep vp_num-top;
+{txt} 10{com}.         keep vp_num-top max_trap_limit;
 {txt} 11{com}.         gen fishing_year=`j';
 {txt} 12{com}.         save `new';
-{txt} 13{com}. {c )-};
+{txt} 13{com}.         clear;
+{txt} 14{com}. {c )-};
 {txt}(31,167 real changes made)
 (9633 real changes made)
-(158,975 observations deleted)
-file /tmp/St21496.000002 saved
-(33,695 real changes made)
-(12460 real changes made)
-(159,274 observations deleted)
-file /tmp/St21496.000003 saved
-(11,898 real changes made)
-(5644 real changes made)
-(174,255 observations deleted)
-file /tmp/St21496.000004 saved
-(17,562 real changes made)
-(11007 real changes made)
-(173,954 observations deleted)
-file /tmp/St21496.000005 saved
-(19,397 real changes made)
-(12153 real changes made)
-(173,265 observations deleted)
-file /tmp/St21496.000006 saved
-(16,042 real changes made)
-(8356 real changes made)
-(172,823 observations deleted)
-file /tmp/St21496.000007 saved
-(15,405 real changes made)
-(7265 real changes made)
-(172,369 observations deleted)
-file /tmp/St21496.000008 saved
-(17,807 real changes made)
-(9454 real changes made)
-(172,156 observations deleted)
-file /tmp/St21496.000009 saved
-(15,697 real changes made)
-(6973 real changes made)
-(171,785 observations deleted)
-file /tmp/St21496.00000a saved
-(16,221 real changes made)
-(7148 real changes made)
-(171,436 observations deleted)
-file /tmp/St21496.00000b saved
-(15,707 real changes made)
-(6477 real changes made)
-(171,279 observations deleted)
-file /tmp/St21496.00000c saved
-(15,625 real changes made)
-(6399 real changes made)
-(171,283 observations deleted)
-file /tmp/St21496.00000d saved
-(15,631 real changes made)
-(6453 real changes made)
-(171,331 observations deleted)
-file /tmp/St21496.00000e saved
-(15,355 real changes made)
-(6072 real changes made)
-(171,226 observations deleted)
-file /tmp/St21496.00000f saved
-(14,243 real changes made)
-(4937 real changes made)
-(171,203 observations deleted)
-file /tmp/St21496.00000g saved
-(15,178 real changes made)
-(5894 real changes made)
-(171,225 observations deleted)
-file /tmp/St21496.00000h saved
-(14,552 real changes made)
-(5293 real changes made)
-(171,250 observations deleted)
-file /tmp/St21496.00000i saved
-(14,222 real changes made)
-(4950 real changes made)
-(171,237 observations deleted)
-file /tmp/St21496.00000j saved
-(14,031 real changes made)
-(4737 real changes made)
-(171,215 observations deleted)
-file /tmp/St21496.00000k saved
-(14,449 real changes made)
-(5125 real changes made)
-(171,185 observations deleted)
-file /tmp/St21496.00000l saved
-(10,162 real changes made)
-(912 real changes made)
-(171,259 observations deleted)
-file /tmp/St21496.00000m saved
+(191,451 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000002.tmp{rm}
+saved
+as .dta format
+{p_end}
+(33,694 real changes made)
+(12459 real changes made)
+(191,750 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000003.tmp{rm}
+saved
+as .dta format
+{p_end}
+(11,897 real changes made)
+(5643 real changes made)
+(206,731 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000004.tmp{rm}
+saved
+as .dta format
+{p_end}
+(17,561 real changes made)
+(11006 real changes made)
+(206,430 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000005.tmp{rm}
+saved
+as .dta format
+{p_end}
+(19,396 real changes made)
+(12152 real changes made)
+(205,741 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000006.tmp{rm}
+saved
+as .dta format
+{p_end}
+(16,038 real changes made)
+(8352 real changes made)
+(205,299 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000007.tmp{rm}
+saved
+as .dta format
+{p_end}
+(15,404 real changes made)
+(7264 real changes made)
+(204,845 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000008.tmp{rm}
+saved
+as .dta format
+{p_end}
+(17,806 real changes made)
+(9453 real changes made)
+(204,632 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_000009.tmp{rm}
+saved
+as .dta format
+{p_end}
+(15,696 real changes made)
+(6972 real changes made)
+(204,261 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_00000a.tmp{rm}
+saved
+as .dta format
+{p_end}
+(16,220 real changes made)
+(7147 real changes made)
+(203,912 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_00000b.tmp{rm}
+saved
+as .dta format
+{p_end}
+(15,706 real changes made)
+(6476 real changes made)
+(203,755 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_00000c.tmp{rm}
+saved
+as .dta format
+{p_end}
+(15,624 real changes made)
+(6398 real changes made)
+(203,759 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_00000d.tmp{rm}
+saved
+as .dta format
+{p_end}
+(15,630 real changes made)
+(6452 real changes made)
+(203,807 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_00000e.tmp{rm}
+saved
+as .dta format
+{p_end}
+(15,353 real changes made)
+(6071 real changes made)
+(203,703 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_00000f.tmp{rm}
+saved
+as .dta format
+{p_end}
+(14,241 real changes made)
+(4936 real changes made)
+(203,680 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_00000g.tmp{rm}
+saved
+as .dta format
+{p_end}
+(15,176 real changes made)
+(5893 real changes made)
+(203,702 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_00000h.tmp{rm}
+saved
+as .dta format
+{p_end}
+(14,550 real changes made)
+(5292 real changes made)
+(203,727 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_00000i.tmp{rm}
+saved
+as .dta format
+{p_end}
+(14,220 real changes made)
+(4949 real changes made)
+(203,714 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_00000j.tmp{rm}
+saved
+as .dta format
+{p_end}
+(14,028 real changes made)
+(4736 real changes made)
+(203,693 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_00000k.tmp{rm}
+saved
+as .dta format
+{p_end}
+(14,447 real changes made)
+(5124 real changes made)
+(203,662 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_00000l.tmp{rm}
+saved
+as .dta format
+{p_end}
+(14,308 real changes made)
+(4914 real changes made)
+(203,591 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_00000m.tmp{rm}
+saved
+as .dta format
+{p_end}
+(14,177 real changes made)
+(4699 real changes made)
+(203,507 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_00000n.tmp{rm}
+saved
+as .dta format
+{p_end}
+(14,308 real changes made)
+(4742 real changes made)
+(203,419 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_00000o.tmp{rm}
+saved
+as .dta format
+{p_end}
+(14,115 real changes made)
+(4448 real changes made)
+(203,318 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_00000p.tmp{rm}
+saved
+as .dta format
+{p_end}
+(15,196 real changes made)
+(4976 real changes made)
+(202,765 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_00000q.tmp{rm}
+saved
+as .dta format
+{p_end}
+(15,375 real changes made)
+(4659 real changes made)
+(202,269 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_00000r.tmp{rm}
+saved
+as .dta format
+{p_end}
+(12,646 real changes made)
+(1509 real changes made)
+(201,848 observations deleted)
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_10d8_00000s.tmp{rm}
+saved
+as .dta format
+{p_end}
 
-{com}. dsconcat `NEWfiles';
+{com}. append using `NEWfiles';
 {txt}
 {com}. rename vp_num permit;
 {res}{txt}
@@ -1590,13 +4179,13 @@ file /tmp/St21496.00000m saved
 > 
 > merge 1:1 permit fishing_year using $my_workdir/permit_working_$today_date_string;
 {res}
-{txt}{col 5}Result{col 38}# of obs.
+{txt}{col 5}Result{col 33}Number of obs
 {col 5}{hline 41}
-{col 5}not matched{col 30}{res}          91,505
-{txt}{col 9}from master{col 30}{res}          91,496{txt}  (_merge==1)
-{col 9}from using{col 30}{res}               9{txt}  (_merge==2)
+{col 5}Not matched{col 30}{res}         123,281
+{txt}{col 9}from master{col 30}{res}         123,269{txt}  (_merge==1)
+{col 9}from using{col 30}{res}              12{txt}  (_merge==2)
 
-{col 5}matched{col 30}{res}         115,208{txt}  (_merge==3)
+{col 5}Matched{col 30}{res}         144,355{txt}  (_merge==3)
 {col 5}{hline 41}
 
 {com}. saveold $my_workdir/permit_portfolio_$today_date_string, version(12) replace;
@@ -1604,7 +4193,24 @@ file /tmp/St21496.00000m saved
 (saving in Stata 12 format, which can be read
 by Stata 11 or 12)
 {p_end}
-file /home/mlee/Documents/projects/Birkenbach/data_folder/permit_portfolio_2017_01_18.dta saved
+{p 0 4 2}
+file {bf}
+C:/Users/Min-Yang.Lee/Documents/MAM2/data_folder/permit_portfolio_2023_08_09.dta{rm}
+saved
+{p_end}
+
+{com}. keep hull_id fishing_year max_trap_limit;
+{txt}
+{com}. saveold $my_workdir/lobster_traps_$today_date_string, version(12) replace;
+{txt}{p 0 1 2}
+(saving in Stata 12 format, which can be read
+by Stata 11 or 12)
+{p_end}
+{p 0 4 2}
+file {bf}
+C:/Users/Min-Yang.Lee/Documents/MAM2/data_folder/lobster_traps_2023_08_09.dta{rm}
+saved
+{p_end}
 
 {com}. 
 {txt}end of do-file
@@ -1624,10 +4230,11 @@ file /home/mlee/Documents/projects/Birkenbach/data_folder/permit_portfolio_2017_
 > /* Part A. PLAN and Category */
 > clear;
 {txt}
-{com}. odbc load, exec("select fishery_id, plan, cat, permit_year, descr, moratorium_fishery, mandatory_reporting, per_yr_start_date, per_yr_end_date from valid_fishery;") conn("$mysole_conn") ;
+{com}. odbc load, exec("select fishery_id, plan, cat, permit_year, descr, moratorium_fishery, mandatory_reporting, per_yr_start_date, per_yr_end_date from valid_fishery;")  $oracle_cxn;
 {txt}
-{com}. renvars, lower;
-{txt}
+{com}.  renvars, lower;
+{txt}no renames necessary
+
 {com}. notes: made by "fishery_key_file.do";
 {res}{txt}
 {com}. notes: moratorium_fishery=T means limited access. You can also verify this from the "descr" field. ;
@@ -1639,31 +4246,36 @@ file /home/mlee/Documents/projects/Birkenbach/data_folder/permit_portfolio_2017_
 (saving in Stata 12 format, which can be read
 by Stata 11 or 12)
 {p_end}
-file /home/mlee/Documents/projects/Birkenbach/data_folder/fishery_keyfile_2017_01_18.dta saved
+{p 0 4 2}
+file {bf}
+C:/Users/Min-Yang.Lee/Documents/MAM2/data_folder/fishery_keyfile_2023_08_09.dta{rm}
+saved
+{p_end}
 
 {com}. /* Part B. Species Codes*/
 > clear;
 {txt}
-{com}. odbc load, exec("select nespp4, species_itis, common_name, scientific_name, unit_of_measure, grade_code, grade_desc, market_code, market_desc, cf_lndlb_livlb, cf_rptqty_lndlb from species_itis_ne;") conn("$mysole_conn") ;
+{com}. odbc load, exec("select nespp4, species_itis, common_name, scientific_name, unit_of_measure, grade_code, grade_desc, market_code, market_desc, cf_lndlb_livlb, cf_rptqty_lndlb from species_itis_ne;")  $oracle_cxn;
 {txt}
-{com}. destring, replace;
-{txt}NESPP4 has all characters numeric; {res}replaced {txt}as {res}int
-{txt}SPECIES_ITIS has all characters numeric; {res}replaced {txt}as {res}long
-{txt}COMMON_NAME contains nonnumeric characters; no {res}replace
-{txt}SCIENTIFIC_NAME contains nonnumeric characters; no {res}replace
-{txt}UNIT_OF_MEASURE contains nonnumeric characters; no {res}replace
-{txt}GRADE_CODE contains nonnumeric characters; no {res}replace
-{txt}GRADE_DESC contains nonnumeric characters; no {res}replace
-{txt}MARKET_CODE contains nonnumeric characters; no {res}replace
-{txt}MARKET_DESC contains nonnumeric characters; no {res}replace
-{txt}CF_LNDLB_LIVLB already numeric; no {res}replace
-{txt}CF_RPTQTY_LNDLB already numeric; no {res}replace
+{com}.  destring, replace;
+{txt}nespp4: all characters numeric; {res}replaced {txt}as {res}int
+{txt}species_itis: all characters numeric; {res}replaced {txt}as {res}long
+{txt}common_name: contains nonnumeric characters; no {res}replace
+{txt}scientific_name: contains nonnumeric characters; no {res}replace
+{txt}unit_of_measure: contains nonnumeric characters; no {res}replace
+{txt}grade_code: contains nonnumeric characters; no {res}replace
+{txt}grade_desc: contains nonnumeric characters; no {res}replace
+{txt}market_code: contains nonnumeric characters; no {res}replace
+{txt}market_desc: contains nonnumeric characters; no {res}replace
+{txt}cf_lndlb_livlb already numeric; no {res}replace
+{txt}cf_rptqty_lndlb already numeric; no {res}replace
 {txt}
 {com}. compress;
 {txt}  (0 bytes saved)
 
 {com}. renvars, lower;
-{txt}
+{txt}no renames necessary
+
 {com}. notes: made by "fishery_key_file.do";
 {res}{txt}
 {com}. saveold  $my_workdir/species_keyfile_$today_date_string.dta, replace version(12);
@@ -1671,40 +4283,38 @@ file /home/mlee/Documents/projects/Birkenbach/data_folder/fishery_keyfile_2017_0
 (saving in Stata 12 format, which can be read
 by Stata 11 or 12)
 {p_end}
-file /home/mlee/Documents/projects/Birkenbach/data_folder/species_keyfile_2017_01_18.dta saved
+{p 0 4 2}
+file {bf}
+C:/Users/Min-Yang.Lee/Documents/MAM2/data_folder/species_keyfile_2023_08_09.dta{rm}
+saved
+{p_end}
 
 {com}. clear;
 {txt}
-{com}. odbc load, exec("select sppnm, mktnm, nespp3, sppnm3, nespp4, necnv as cf_lndlb_livlb from cfspp;") conn("$mysole_conn") ;
+{com}. odbc load, exec("select sppnm, mktnm, nespp3, sppnm3, nespp4, necnv as cf_lndlb_livlb from cfspp;")  $oracle_cxn;
 {txt}
-{com}. destring, replace;
-{txt}SPPNM contains nonnumeric characters; no {res}replace
-{txt}MKTNM contains nonnumeric characters; no {res}replace
-{txt}NESPP3 has all characters numeric; {res}replaced {txt}as {res}int
-{txt}(2 missing values generated)
-{res}{txt}SPPNM3 contains nonnumeric characters; no {res}replace
-{txt}NESPP4 has all characters numeric; {res}replaced {txt}as {res}int
-{txt}(2 missing values generated)
-{res}{txt}CF_LNDLB_LIVLB already numeric; no {res}replace
+{com}.  destring, replace;
+{txt}sppnm: contains nonnumeric characters; no {res}replace
+{txt}mktnm: contains nonnumeric characters; no {res}replace
+{txt}nespp3: all characters numeric; {res}replaced {txt}as {res}int
+{txt}sppnm3: contains nonnumeric characters; no {res}replace
+{txt}nespp4: all characters numeric; {res}replaced {txt}as {res}int
+{txt}cf_lndlb_livlb already numeric; no {res}replace
 {txt}
 {com}. compress;
 {txt}  (0 bytes saved)
 
 {com}. renvars, lower;
-{txt}
+{txt}no renames necessary
+
 {com}. dups, drop terse;
 
 {txt}group by:{res} sppnm mktnm nespp3 sppnm3 nespp4 cf_lndlb_livlb
 
-{txt}groups formed: {res}1
+{txt}groups formed: {res}0
+{txt}(0 observations deleted)
 
-{txt}total observations:{res}  909
-{txt}  in duplicates    {res}    2
-{txt}  in unique        {res}  907
-
-{txt}(1 observation deleted)
-
-observations remaining: {res}908
+observations remaining: {res}1025
 {txt}
 {com}. drop if nespp3<=0;
 {txt}(4 observations deleted)
@@ -1724,38 +4334,43 @@ observations remaining: {res}908
 (saving in Stata 12 format, which can be read
 by Stata 11 or 12)
 {p_end}
-file /home/mlee/Documents/projects/Birkenbach/data_folder/nespp4_keyfile_2017_01_18.dta saved
+{p 0 4 2}
+file {bf}
+C:/Users/Min-Yang.Lee/Documents/MAM2/data_folder/nespp4_keyfile_2023_08_09.dta{rm}
+saved
+{p_end}
 
 {com}. clear;
 {txt}
-{com}. odbc load, exec("select sppcode, nespp3, nespp4, sppname, sppconv, comments from vlsppsyn;") conn("$mysole_conn") ;
+{com}. odbc load, exec("select sppcode, nespp3, nespp4, sppname, sppconv, comments from vlsppsyn;")  $oracle_cxn;
 {txt}
-{com}. destring, replace;
-{txt}SPPCODE contains nonnumeric characters; no {res}replace
-{txt}NESPP3 has all characters numeric; {res}replaced {txt}as {res}int
-{txt}NESPP4 has all characters numeric; {res}replaced {txt}as {res}int
-{txt}SPPNAME contains nonnumeric characters; no {res}replace
-{txt}SPPCONV already numeric; no {res}replace
-{txt}COMMENTS contains nonnumeric characters; no {res}replace
+{com}.  destring, replace;
+{txt}sppcode: contains nonnumeric characters; no {res}replace
+{txt}nespp3: all characters numeric; {res}replaced {txt}as {res}int
+{txt}nespp4: all characters numeric; {res}replaced {txt}as {res}int
+{txt}sppname: contains nonnumeric characters; no {res}replace
+{txt}sppconv already numeric; no {res}replace
+{txt}comments: contains nonnumeric characters; no {res}replace
 {txt}
 {com}. compress;
 {txt}  (0 bytes saved)
 
 {com}. renvars, lower;
-{txt}
+{txt}no renames necessary
+
 {com}. dups, drop terse;
 
 {txt}group by:{res} sppcode nespp3 nespp4 sppname sppconv comments
 
-{txt}groups formed: {res}137
+{txt}groups formed: {res}159
 
-{txt}total observations:{res}  675
-{txt}  in duplicates    {res}  532
-{txt}  in unique        {res}  143
+{txt}total observations:{res}  789
+{txt}  in duplicates    {res}  612
+{txt}  in unique        {res}  177
 
-{txt}(395 observations deleted)
+{txt}(453 observations deleted)
 
-observations remaining: {res}280
+observations remaining: {res}336
 {txt}
 {com}. drop if nespp4<=-1;
 {txt}(0 observations deleted)
@@ -1771,7 +4386,11 @@ observations remaining: {res}280
 (saving in Stata 12 format, which can be read
 by Stata 11 or 12)
 {p_end}
-file /home/mlee/Documents/projects/Birkenbach/data_folder/vlspp_keyfile_2017_01_18.dta saved
+{p 0 4 2}
+file {bf}
+C:/Users/Min-Yang.Lee/Documents/MAM2/data_folder/vlspp_keyfile_2023_08_09.dta{rm}
+saved
+{p_end}
 
 {com}. 
 {txt}end of do-file
@@ -1782,15 +4401,16 @@ file /home/mlee/Documents/projects/Birkenbach/data_folder/vlspp_keyfile_2017_01_
 {txt}delimiter now ;
 {com}. clear;
 {txt}
-{com}. odbc load, exec("select port, portnm, stateabb, county, doc from port ;") conn("$mysole_conn") ;
+{com}. odbc load, exec("select port, portnm, stateabb, county, doc from port ;")  $oracle_cxn;
 {txt}
-{com}. renvars, lower;
-{txt}
+{com}.  renvars, lower;
+{txt}no renames necessary
+
 {com}. destring, replace;
-{txt}port has all characters numeric; {res}replaced {txt}as {res}long
-{txt}portnm contains nonnumeric characters; no {res}replace
-{txt}stateabb contains nonnumeric characters; no {res}replace
-{txt}county contains nonnumeric characters; no {res}replace
+{txt}port: all characters numeric; {res}replaced {txt}as {res}long
+{txt}portnm: contains nonnumeric characters; no {res}replace
+{txt}stateabb: contains nonnumeric characters; no {res}replace
+{txt}county: contains nonnumeric characters; no {res}replace
 {txt}doc already numeric; no {res}replace
 {txt}
 {com}. notes: made by "port_key_file.do" ;
@@ -1800,53 +4420,11 @@ file /home/mlee/Documents/projects/Birkenbach/data_folder/vlspp_keyfile_2017_01_
 (saving in Stata 12 format, which can be read
 by Stata 11 or 12)
 {p_end}
-file /home/mlee/Documents/projects/Birkenbach/data_folder/cfdbs_port_keyfile_2017_01_18.dta saved
-
-{com}. 
-{txt}end of do-file
-
-{com}. do "cfdbs_data_dump.do";
-{txt}
-{com}. #delimit;
-{txt}delimiter now ;
-{com}. quietly forvalues yr=$firstders/$lastyr{c -(};
-{txt}
-{com}. dsconcat `dsp1';
-{txt}
-{com}.         renvarlab, lower;
-{txt}No renames necessary: all new names match old names
-
-{com}.         destring, replace       ;
-{txt}landings already numeric; no {res}replace
-{txt}live already numeric; no {res}replace
-{txt}value already numeric; no {res}replace
-{txt}port already numeric; no {res}replace
-{txt}year already numeric; no {res}replace
-{txt}month already numeric; no {res}replace
-{txt}day already numeric; no {res}replace
-{txt}nespp4 already numeric; no {res}replace
-{txt}species_itis already numeric; no {res}replace
-{txt}grade_code already numeric; no {res}replace
-{txt}market_code contains nonnumeric characters; no {res}replace
-{txt}
-{com}.         compress;
-{txt}  (0 bytes saved)
-
-{com}. gen date=mdy(month, day, year);
-{txt}(60,865 missing values generated)
-
-{com}. format date %td;
-{txt}
-{com}. compress;
-  {txt}variable {bf}date{sf} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
-{txt}  (33,184,824 bytes saved)
-
-{com}. saveold $my_workdir/cfdbs_$today_date_string.dta, replace version(12);
-{txt}{p 0 1 2}
-(saving in Stata 12 format, which can be read
-by Stata 11 or 12)
+{p 0 4 2}
+file {bf}
+C:/Users/Min-Yang.Lee/Documents/MAM2/data_folder/cfdbs_port_keyfile_2023_08_09.dta{rm}
+saved
 {p_end}
-file /home/mlee/Documents/projects/Birkenbach/data_folder/cfdbs_2017_01_18.dta saved
 
 {com}. 
 {txt}end of do-file
@@ -1856,50 +4434,119 @@ file /home/mlee/Documents/projects/Birkenbach/data_folder/cfdbs_2017_01_18.dta s
 {com}. #delimit;
 {txt}delimiter now ;
 {com}. /* Processed data subset */
-> use "/home/mlee/Documents/projects/spacepanels/scallop/spatial_project_08052016/veslog_species_huge.dta", clear;
+> 
+> use "$spacepanels_data", clear;
 {txt}
-{com}. keep if dbyear>=2003;
-{txt}(2,467,710 observations deleted)
-
-{com}. drop LADAS GC NGOM IFQ INC Nopermit_scal revenue1 adj_qtykept state_xfactor;
+{com}. *keep if dbyear>=2003;
+. drop LADAS GC NGOM IFQ INC Nopermit_scal revenue1 adj_qtykept state_xfactor;
 {txt}
 {com}. compress;
-  {txt}variable {bf}portlnd1{sf} was {bf}{res}str20{sf}{txt} now {bf}{res}str19{sf}
-{txt}  (3,738,161 bytes saved)
+{txt}  (0 bytes saved)
 
 {com}. notes drop _dta in 5;
 {res}{txt}  (1 note dropped)
 
-{com}. saveold $my_workdir/processed_trips_$today_date_string.dta, version(12) replace ;
-{txt}{p 0 1 2}
-(saving in Stata 12 format, which can be read
-by Stata 11 or 12)
+{com}. save $my_workdir/processed_trips_$today_date_string.dta, replace;
+{txt}{p 0 4 2}
+file {bf}
+C:/Users/Min-Yang.Lee/Documents/MAM2/data_folder/processed_trips_2023_08_09.dta{rm}
+saved
 {p_end}
-file /home/mlee/Documents/projects/Birkenbach/data_folder/processed_trips_2017_01_18.dta saved
 
-{com}. use "/home/mlee/Documents/projects/spacepanels/scallop/spatial_project_08052016/veslog_species_huge.dta", clear;
+{com}. use "$spacepanels_data", clear;
 {txt}
 {com}. gen mark=1;
 {txt}
 {com}. collapse (sum) mark, by(state1 portlnd1 geoid namelsad);
-{txt}
+{res}{txt}
 {com}. drop mark;
 {txt}
-{com}. saveold $my_workdir/port_geoid_keyfile_$today_date_string.dta, replace version(12);
-{txt}{p 0 1 2}
-(saving in Stata 12 format, which can be read
-by Stata 11 or 12)
+{com}. replace state1=ltrim(itrim(rtrim(state1)));
+{txt}(0 real changes made)
+
+{com}. replace portlnd1=ltrim(itrim(rtrim(portlnd1)));
+{txt}(0 real changes made)
+
+{com}. drop if portlnd1=="OTHER NY" & geoid==.;
+{txt}(1 observation deleted)
+
+{com}. drop if portlnd1=="OTHER ME" & geoid==.;
+{txt}(1 observation deleted)
+
+{com}. bysort portlnd1 state1: assert _N==1;
+{txt}
+{com}. save $my_workdir/port_geoid_keyfile_$today_date_string.dta, replace;
+{txt}{p 0 4 2}
+file {bf}
+C:/Users/Min-Yang.Lee/Documents/MAM2/data_folder/port_geoid_keyfile_2023_08_09.dta{rm}
+saved
 {p_end}
-file /home/mlee/Documents/projects/Birkenbach/data_folder/port_geoid_keyfile_2017_01_18.dta saved
+
+{com}. 
+{txt}end of do-file
+
+{com}. do "final_geoid_clean.do";
+{txt}
+{com}. #delimit;
+{txt}delimiter now ;
+{com}. use $my_workdir/veslog_T$today_date_string.dta, replace ;
+{txt}
+{com}. rename portlnd1 portlnd1_clean;
+{res}{txt}
+{com}. rename state1 state1_clean;
+{res}{txt}
+{com}. rename raw_portlnd1 portlnd1;
+{res}{txt}
+{com}. rename raw_state1 state1;
+{res}{txt}
+{com}. merge m:1 state1 portlnd1 using "$my_workdir/port_geoid_keyfile_$today_date_string.dta", update;
+{res}
+{txt}{col 5}Result{col 33}Number of obs
+{col 5}{hline 41}
+{col 5}Not matched{col 30}{res}         143,998
+{txt}{col 9}from master{col 30}{res}         143,834{txt}  (_merge==1)
+{col 9}from using{col 30}{res}             164{txt}  (_merge==2)
+
+{col 5}Matched{col 30}{res}       2,590,429
+{txt}{col 9}not updated{col 30}{res}       1,791,413{txt}  (_merge==3)
+{col 9}missing updated{col 30}{res}         797,875{txt}  (_merge==4)
+{col 9}nonmissing conflict{col 30}{res}           1,141{txt}  (_merge==5)
+{col 5}{hline 41}
+
+{com}. drop if _merge==2;
+{txt}(164 observations deleted)
+
+{com}. replace portlnd1_clean=portlnd1 if _merge==4;
+{txt}(797,773 real changes made)
+
+{com}. replace state1_clean=state1 if _merge==4;
+{txt}(797,773 real changes made)
+
+{com}. drop portlnd1 state1;
+{txt}
+{com}. rename portlnd1_clean portlnd1;
+{res}{txt}
+{com}. rename state1_clean state1;
+{res}{txt}
+{com}. drop _merge ;
+{txt}
+{com}. drop namelsad;
+{txt}
+{com}. save $my_workdir/veslog_T$today_date_string.dta, replace ;
+{txt}{p 0 4 2}
+file {bf}
+C:/Users/Min-Yang.Lee/Documents/MAM2/data_folder/veslog_T2023_08_09.dta{rm}
+saved
+{p_end}
 
 {com}. 
 {txt}end of do-file
 
 {com}. log close;
       {txt}name:  {res}<unnamed>
-       {txt}log:  {res}/home/mlee/Documents/projects/Birkenbach/MAM_code_folder/MAM/AB_extraction.smcl
+       {txt}log:  {res}C:\Users\Min-Yang.Lee\Documents\MAM2\MAM_code_folder\MAM\AB_extraction.smcl
   {txt}log type:  {res}smcl
- {txt}closed on:  {res}18 Jan 2017, 10:11:59
+ {txt}closed on:  {res} 9 Aug 2023, 12:08:15
 {txt}{.-}
 {smcl}
 {txt}{sf}{ul off}

@@ -21,4 +21,4 @@ gen monthly=mofd(datesail);
 
 collapse (mean) fuelprice, by(stateabb monthly);
 format monthly %tm;
-saveold "${my_workdir}/monthly_state_fuelprices_$today_date_string.dta", version(11) replace;
+saveold "monthly_state_fuelprices_$today_date_string.dta", version(11) replace;
