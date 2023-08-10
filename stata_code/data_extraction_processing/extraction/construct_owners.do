@@ -31,12 +31,16 @@ Note2: There are some VP_NUM's that have revenue but no ownership information. T
 
 clear;
 odbc load,  exec("select distinct(b.person_id), b.business_name, c.business_id, a.vp_num, a.ap_year, ves.hull_id
-	from permit.vps_owner c, permit.bus_own b, permit.vps_fishery_ner a, permit.vps_vessel ves
-		where c.ap_num in (select max(ap_num) as ap_num from permit.vps_fishery_ner where ap_year between 2010 and 2015 group by vp_num, ap_year)
+	from permit.vps_owner@garfo_nefsc c, client.bus_own@garfo_nefsc b, permit.vps_fishery_ner@garfo_nefsc a, permit.vps_vessel ves
+		where c.ap_num in (select max(ap_num) as ap_num from permit.vps_fishery_ner@garfo_nefsc where ap_year between $firstyr and $lastyr group by vp_num, ap_year)
 	 and c.business_id=b.business_id and a.ap_num=c.ap_num and a.ap_num=ves.ap_num;") $mysole_conn;
 
-
+	 
 display "check1";
+
+/*there's a single vp_num that has two owners for the same ap_num. I'm dropping 1 of them */
+drop if vp_num==240095 & business_id==788 & ap_year==2017;
+
 /* important to use bysort vp_num ap_year (person_id) to consistently order the person-id's within the groups defined by vp_num and ap_year*/
 /* this just generates a numeric 'suffix' for the person_id variable.  For a given VP_NUM and YEAR, the lowest person_id has the lowest jid.
 This is not important for now, but will be used in the next step when arraying person ids.*/
@@ -49,7 +53,7 @@ sort person_id*;
 
 /* Generate affiliate_id variable: Observations which have the same value for affiliate_id have the same distinch pattern of person_ids.
 egen group() constructs a new variable taking on values 1,2,3,...., for each distinct combination of the person_id variables. The missing option allows for a missing value to be matched.  */
-
+replace person_id1=99000000+vp_num if person_id1==.;
 assert person_id1<.;
 egen affiliate_id=group(person_id*), missing;
 order affiliate_id ap_year vp_num;
@@ -88,6 +92,6 @@ save "${my_workdir}/ownership1_${today_date_string}.dta", replace;
 
 clear;
 
-odbc load,  exec("select business_id, business_name, person_id, name_first, name_middle, name_last from permit.bus_own;") $mysole_conn;
+odbc load,  exec("select business_id, business_name, person_id, name_first, name_middle, name_last from client.bus_own@garfo_nefsc;") $mysole_conn;
 destring, replace;
 save "${my_workdir}/names_${today_date_string}.dta", replace;

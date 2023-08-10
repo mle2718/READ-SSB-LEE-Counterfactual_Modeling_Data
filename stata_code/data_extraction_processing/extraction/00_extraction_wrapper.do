@@ -1,17 +1,19 @@
 /*This extracts data for Anna.  There is a collection of do files that does the actual work, this is essentially a wrapper and table of contents. 
  */
 
- #delimit;
+#delimit ;
 
  
 global my_projdir "C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data";
 
 global oracle_cxn " $mysole_conn";
-global my_codedir "${my_projdir}/stata_code/data_extraction_processing"";
+global my_codedir "${my_projdir}/stata_code/data_extraction_processing/extraction";
 global my_workdir  "${my_projdir}/data_folder/main";
+global results  "${my_projdir}/results";
 
 
-global spacepanels_data "C:/Users/Min-Yang.Lee/Documents/spacepanels/data_folder/main/veslog_species_huge_2022_01_26";
+
+global spacepanels_data "C:/Users/Min-Yang.Lee/Documents/spacepanels/data_folder/main/veslog_species_huge_2023_08_09";
 
 
 
@@ -19,7 +21,7 @@ global spacepanels_data "C:/Users/Min-Yang.Lee/Documents/spacepanels/data_folder
 cd $my_codedir; 
 pause off;
 
-*log using "AB_extraction.smcl", replace;
+log using "${results}/AB_extraction.smcl", replace;
 timer on 1;
 
 local date: display %td_CCYY_NN_DD date(c(current_date), "DMY");
@@ -31,7 +33,7 @@ global pass groundfish;
 global firstyr 2010;
 global secondyr =$firstyr+1;
 
-global lastyr 2019;
+global lastyr 2022;
 global firstders 1997;
 
 do "construct_owners.do";
@@ -48,13 +50,11 @@ do "declaration_codes.do";
 
 do "das_allocations_used.do";
 do "das_allocations.do";
-do "mqrs_rosters.do";
-/*BROKEN?
-do "sector_roster_cph_pulls.do";*/
 
 
 do "cr_boats.do";
 
+#delimit ;
 *do "das_allocations_used.do";
 do "das_allocations_usedR.do";
 
@@ -63,10 +63,14 @@ do "mort_elig_criteria_extractions.do";
 
 
 /* Get the sector rosters and ACE holdings */
-do "roster_extractions.do";
-do "psc_extractor.do";
-do "ace_transfers.do";
 
+
+do "roster_extractions.do";
+
+do "psc_extractor.do";
+/*
+do "ace_transfers.do";
+*/
 
 
 /* Get VTR data at the gearid level */
@@ -82,7 +86,7 @@ do "processed_data_subset.do";
 do "final_geoid_clean.do";
 
 
-*log close;
+log close;
 
 
 /*TO DO 

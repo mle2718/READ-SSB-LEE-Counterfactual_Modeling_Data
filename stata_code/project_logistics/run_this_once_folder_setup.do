@@ -15,7 +15,7 @@ if strmatch("$user","minyang"){;
 global my_projdir "/home/mlee/Documents/projects/new-project-templates";
 };
 if strmatch("$user","minyangWin"){;
-global my_projdir "C:/Users/Min-Yang.Lee/Documents/new-project-templates";
+global my_projdir "C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data";
 
 };
 

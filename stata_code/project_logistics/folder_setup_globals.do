@@ -10,18 +10,10 @@ global user minyang;
 global user minyangWin; 
 */
 
-
-if strmatch("$user","minyang"){;
-global my_projdir "/home/mlee/Documents/projects/project_templates";
-quietly do "/home/mlee/Documents/Workspace/technical folder/do file scraps/odbc_connection_macros.do";
-global oracle_cxn "conn("$mysole_conn") lower";
-};
-
 /*minyangWin is setup to connect to oracle yet */
 if strmatch("$user","minyangWin"){;
-global my_projdir "C:/Users/Min-Yang.Lee/Documents/new-project-templates";
-quietly do "C:/Users/Min-Yang.Lee/Documents/common/odbc_setup_macros.do";
-global oracle_cxn " $mysole_conn lower";
+global my_projdir "C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data";
+global oracle_cxn " $mysole_conn" ;
 
 };
 
