@@ -9,6 +9,7 @@ global my_projdir "C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_M
 global oracle_cxn " $mysole_conn";
 global my_codedir "${my_projdir}/stata_code/data_extraction_processing/extraction";
 global my_workdir  "${my_projdir}/data_folder/main";
+global results  "${my_projdir}/results";
 
 
 
@@ -20,7 +21,7 @@ global spacepanels_data "C:/Users/Min-Yang.Lee/Documents/spacepanels/data_folder
 cd $my_codedir; 
 pause off;
 
-log using "AB_extraction.smcl", replace;
+log using "${results}/AB_extraction.smcl", replace;
 timer on 1;
 
 local date: display %td_CCYY_NN_DD date(c(current_date), "DMY");
