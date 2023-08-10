@@ -1,13 +1,13 @@
 /*This extracts data for Anna.  There is a collection of do files that does the actual work, this is essentially a wrapper and table of contents. 
  */
 
- #delimit;
+#delimit ;
 
  
 global my_projdir "C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data";
 
 global oracle_cxn " $mysole_conn";
-global my_codedir "${my_projdir}/stata_code/data_extraction_processing"";
+global my_codedir "${my_projdir}/stata_code/data_extraction_processing/extraction";
 global my_workdir  "${my_projdir}/data_folder/main";
 
 
