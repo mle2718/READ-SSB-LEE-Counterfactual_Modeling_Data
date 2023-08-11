@@ -1,13 +1,14 @@
 # Project Template
 This is the data extraction repository that corresponds to  (https://github.com/NEFSC/READ-SSB-Lee-Counterfactual_Modeling_of_Multispecies_Fisheries).
 
-The repository at (this point)[https://github.com/mle2718/READ-SSB-Lee-Counterfactual_Modeling_Data/tree/30d0c1403439c952e3c88620825f3088f2feb67e] captures the data extraction code use for the"Birkenbach, Lee, and Smith "Counterfactual Modeling of Multispecies Fisheries Outcomes Under Market-Based Regulation." Journal of the Association of Environmental and Resource Economists."   See:
+The repository at [this point](https://github.com/mle2718/READ-SSB-Lee-Counterfactual_Modeling_Data/tree/30d0c1403439c952e3c88620825f3088f2feb67e) captures the data extraction code use for the"Birkenbach, Lee, and Smith "Counterfactual Modeling of Multispecies Fisheries Outcomes Under Market-Based Regulation." Journal of the Association of Environmental and Resource Economists."   See:
 1. https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/PJ4YZZ
 2. [![DOI](https://zenodo.org/badge/479089401.svg)](https://zenodo.org/badge/latestdoi/479089401)
 3. Link to paper forthcoming.
 
+This repository will be used to extract and do minimal processing for additional years of data (2016-2022).
 
-
+One of the inputs to this data processing code are "cleaned" ports, which are an output of (https://github.com/NEFSC/READ-SSB-Lee-spacepanels)
 # How to use
 1. Clone. Run the ``/stata_code/data_extraction_processing/extraction/00_extraction_wrapper.do`` file
 
