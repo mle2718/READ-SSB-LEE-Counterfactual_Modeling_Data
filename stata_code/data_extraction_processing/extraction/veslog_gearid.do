@@ -13,7 +13,8 @@ quietly forvalues yr=$firstders/$lastyr{;
 	where g.tripid in 
 		(select distinct tripid from vtr.veslog`yr't where tripcatg in('1','4'));") $oracle_cxn;
 	renvarlab, lower;
-	destring, replace;
+	cap tostring serial_num, replace;
+	
 	compress;
 
 	gen dbyear=`yr';
@@ -47,7 +48,7 @@ quietly forvalues yr=$firstders/$lastyr{;
 	destring, replace;
 	compress;
 	gen dbyear=`yr';
-	
+	cap tostring dealname, replace;
 	quietly save `catchids';
 };
 
@@ -144,8 +145,8 @@ compress;
 bysort tripid (date_canceled): keep if _n==_N;
 bysort tripid: assert _n==1;
 drop hullnum;
-rename fixed_hull_id hullnum
-
+rename fixed_hull_id hullnum ;
+drop date_canceled;
 append using `tripids2017';
 	
 	
@@ -164,7 +165,6 @@ replace dbyear=2017 if tripid==4959274 & dbyear==2016;
 
 
 merge 1:1 tripid using `tports', keep(1 3);
-drop _merge;
 save $my_workdir/veslog_T$today_date_string.dta, replace ;
 
 /* Alternative way to patch in hullnum  .. 
