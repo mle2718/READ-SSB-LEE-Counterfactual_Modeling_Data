@@ -1,9 +1,9 @@
 {smcl}
 {com}{sf}{ul off}{txt}{.-}
       name:  {res}<unnamed>
-       {txt}log:  {res}C:\Users\Min-Yang.Lee\Documents\READ-SSB-Lee-Counterfactual_Modeling_Data\stata_code\data_extraction_processing\extraction\AB_extraction.smcl
+       {txt}log:  {res}C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/results/AB_extraction.smcl
   {txt}log type:  {res}smcl
- {txt}opened on:  {res}10 Aug 2023, 10:19:48
+ {txt}opened on:  {res}16 Aug 2023, 15:55:33
 {txt}
 {com}. timer on 1;
 {txt}
@@ -13,13 +13,13 @@
 {txt}
 {com}. global pass groundfish;
 {txt}
-{com}. global firstyr 2010;
+{com}. global firstyr 2009;
 {txt}
 {com}. global secondyr =$firstyr+1;
 {txt}
 {com}. global lastyr 2022;
 {txt}
-{com}. global firstders 1997;
+{com}. global firstders 2009;
 {txt}
 {com}. do "construct_owners.do";
 {txt}
@@ -78,7 +78,7 @@
 
 Data{col 36}Long{col 43}->{col 48}Wide
 {hline 77}
-Number of observations     {res}      87,413   {txt}->   {res}63,078      
+Number of observations     {res}      87,503   {txt}->   {res}63,143      
 {txt}Number of variables        {res}           7   {txt}->   {res}36          
 {txt}j variable (31 values)              {res}jid   {txt}->   (dropped)
 xij variables:
@@ -118,13 +118,8 @@ xij variables:
 {txt}
 {com}. save "${c -(}my_workdir{c )-}/ownership2_${c -(}today_date_string{c )-}.dta", replace;
 {txt}{p 0 4 2}
-(file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/ownership2_2023_08_10.dta{rm}
-not found)
-{p_end}
-{p 0 4 2}
 file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/ownership2_2023_08_10.dta{rm}
+C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/ownership2_2023_08_16.dta{rm}
 saved
 {p_end}
 
@@ -184,13 +179,8 @@ xij variables:
 {txt}
 {com}. save "${c -(}my_workdir{c )-}/ownership1_${c -(}today_date_string{c )-}.dta", replace;
 {txt}{p 0 4 2}
-(file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/ownership1_2023_08_10.dta{rm}
-not found)
-{p_end}
-{p 0 4 2}
 file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/ownership1_2023_08_10.dta{rm}
+C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/ownership1_2023_08_16.dta{rm}
 saved
 {p_end}
 
@@ -208,13 +198,8 @@ saved
 {txt}
 {com}. save "${c -(}my_workdir{c )-}/names_${c -(}today_date_string{c )-}.dta", replace;
 {txt}{p 0 4 2}
-(file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/names_2023_08_10.dta{rm}
-not found)
-{p_end}
-{p 0 4 2}
 file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/names_2023_08_10.dta{rm}
+C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/names_2023_08_16.dta{rm}
 saved
 {p_end}
 
@@ -239,12 +224,12 @@ saved
 {com}. save `dual', replace;
 {txt}{p 0 4 2}
 (file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000001.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000001.tmp{rm}
 not found)
 {p_end}
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000001.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000001.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -292,13 +277,8 @@ as .dta format
 by Stata 11 or 12)
 {p_end}
 {p 0 4 2}
-(file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/dual_scallops_2023_08_10.dta{rm}
-not found)
-{p_end}
-{p 0 4 2}
 file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/dual_scallops_2023_08_10.dta{rm}
+C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/dual_scallops_2023_08_16.dta{rm}
 saved
 {p_end}
 
@@ -456,7 +436,7 @@ saved
 {txt}(224 missing values generated)
 
 {com}.     gen mycanc=dofc(date_canceled);
-{txt}(896,811 missing values generated)
+{txt}(896,810 missing values generated)
 
 {com}.     format my* %td;
 {txt}
@@ -484,13 +464,8 @@ saved
 by Stata 11 or 12)
 {p_end}
 {p 0 4 2}
-(file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/vps_fishery_raw_2023_08_10.dta{rm}
-not found)
-{p_end}
-{p 0 4 2}
 file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/vps_fishery_raw_2023_08_10.dta{rm}
+C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/vps_fishery_raw_2023_08_16.dta{rm}
 saved
 {p_end}
 
@@ -742,13 +717,8 @@ xij variables:
 by Stata 11 or 12)
 {p_end}
 {p 0 4 2}
-(file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/permit_working_2023_08_10.dta{rm}
-not found)
-{p_end}
-{p 0 4 2}
 file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/permit_working_2023_08_10.dta{rm}
+C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/permit_working_2023_08_16.dta{rm}
 saved
 {p_end}
 
@@ -798,7 +768,7 @@ saved
 {com}.     gen mys=dofc(date_issued);
 {txt}
 {com}.     gen myend=dofc(date_canceled);
-{txt}(6,776 missing values generated)
+{txt}(6,768 missing values generated)
 
 {com}. drop date_issued date_canceled;
 {txt}
@@ -813,12 +783,12 @@ saved
 {com}. save `permit_working', replace;
 {txt}{p 0 4 2}
 (file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000001.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000001.tmp{rm}
 not found)
 {p_end}
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000001.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000001.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -842,7 +812,7 @@ as .dta format
 (191,451 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000002.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000002.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -851,7 +821,7 @@ as .dta format
 (191,750 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000003.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000003.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -860,7 +830,7 @@ as .dta format
 (206,731 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000004.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000004.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -869,7 +839,7 @@ as .dta format
 (206,430 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000005.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000005.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -878,7 +848,7 @@ as .dta format
 (205,741 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000006.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000006.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -887,7 +857,7 @@ as .dta format
 (205,299 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000007.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000007.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -896,7 +866,7 @@ as .dta format
 (204,845 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000008.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000008.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -905,7 +875,7 @@ as .dta format
 (204,632 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000009.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000009.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -914,7 +884,7 @@ as .dta format
 (204,261 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_00000a.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_00000a.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -923,7 +893,7 @@ as .dta format
 (203,912 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_00000b.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_00000b.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -932,7 +902,7 @@ as .dta format
 (203,755 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_00000c.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_00000c.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -941,7 +911,7 @@ as .dta format
 (203,759 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_00000d.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_00000d.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -950,7 +920,7 @@ as .dta format
 (203,807 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_00000e.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_00000e.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -959,7 +929,7 @@ as .dta format
 (203,703 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_00000f.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_00000f.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -968,7 +938,7 @@ as .dta format
 (203,680 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_00000g.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_00000g.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -977,7 +947,7 @@ as .dta format
 (203,702 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_00000h.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_00000h.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -986,7 +956,7 @@ as .dta format
 (203,727 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_00000i.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_00000i.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -995,7 +965,7 @@ as .dta format
 (203,714 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_00000j.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_00000j.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -1004,7 +974,7 @@ as .dta format
 (203,693 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_00000k.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_00000k.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -1013,7 +983,7 @@ as .dta format
 (203,662 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_00000l.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_00000l.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -1022,7 +992,7 @@ as .dta format
 (203,591 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_00000m.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_00000m.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -1031,7 +1001,7 @@ as .dta format
 (203,507 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_00000n.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_00000n.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -1040,7 +1010,7 @@ as .dta format
 (203,419 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_00000o.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_00000o.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -1049,7 +1019,7 @@ as .dta format
 (203,318 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_00000p.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_00000p.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -1058,7 +1028,7 @@ as .dta format
 (202,765 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_00000q.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_00000q.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -1067,7 +1037,7 @@ as .dta format
 (202,269 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_00000r.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_00000r.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -1076,7 +1046,7 @@ as .dta format
 (201,848 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_00000s.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_00000s.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -1104,13 +1074,8 @@ as .dta format
 by Stata 11 or 12)
 {p_end}
 {p 0 4 2}
-(file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/permit_portfolio_2023_08_10.dta{rm}
-not found)
-{p_end}
-{p 0 4 2}
 file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/permit_portfolio_2023_08_10.dta{rm}
+C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/permit_portfolio_2023_08_16.dta{rm}
 saved
 {p_end}
 
@@ -1122,13 +1087,8 @@ saved
 by Stata 11 or 12)
 {p_end}
 {p 0 4 2}
-(file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/lobster_traps_2023_08_10.dta{rm}
-not found)
-{p_end}
-{p 0 4 2}
 file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/lobster_traps_2023_08_10.dta{rm}
+C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/lobster_traps_2023_08_16.dta{rm}
 saved
 {p_end}
 
@@ -1144,11 +1104,7 @@ saved
 {com}. quietly forvalues yr=$firstders/$lastyr{c -(};
 {txt}
 {com}. append using  `dsp1';
-{txt}{p 0 7 2}
-(variable
-{bf:species_itis} was {bf:str6}, now {bf:str7} to accommodate using data's values)
-{p_end}
-
+{txt}
 {com}.         destring, replace;
 {txt}landings already numeric; no {res}replace
 {txt}live already numeric; no {res}replace
@@ -1159,28 +1115,26 @@ saved
 {txt}day: all characters numeric; {res}replaced {txt}as {res}byte
 {txt}nespp4: all characters numeric; {res}replaced {txt}as {res}int
 {txt}species_itis: all characters numeric; {res}replaced {txt}as {res}long
-{txt}(74 missing values generated)
-{res}{txt}grade_code: all characters numeric; {res}replaced {txt}as {res}byte
-{txt}(20 missing values generated)
-{res}{txt}market_code: contains nonnumeric characters; no {res}replace
+{txt}grade_code: all characters numeric; {res}replaced {txt}as {res}byte
+{txt}market_code: contains nonnumeric characters; no {res}replace
 {txt}
 {com}.         compress;
   {txt}variable {bf}{res}landings{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}long{sf}
   {txt}variable {bf}{res}live{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}long{sf}
   {txt}variable {bf}{res}value{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}long{sf}
-{txt}  (88,033,908 bytes saved)
+{txt}  (50,717,772 bytes saved)
 
 {com}.         renvarlab, lower;
 {txt}No renames necessary: all new names match old names
 
 {com}. gen date=mdy(month, day, year);
-{txt}(104,911 missing values generated)
+{txt}(100 missing values generated)
 
 {com}. format date %td;
 {txt}
 {com}. compress;
   {txt}variable {bf}{res}date{sf}{txt} was {bf}{res}float{sf}{txt} now {bf}{res}int{sf}
-{txt}  (14,672,318 bytes saved)
+{txt}  (8,452,962 bytes saved)
 
 {com}. saveold $my_workdir/cfdbs_$today_date_string.dta, replace version(12);
 {txt}{p 0 1 2}
@@ -1188,13 +1142,8 @@ saved
 by Stata 11 or 12)
 {p_end}
 {p 0 4 2}
-(file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/cfdbs_2023_08_10.dta{rm}
-not found)
-{p_end}
-{p 0 4 2}
 file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/cfdbs_2023_08_10.dta{rm}
+C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/cfdbs_2023_08_16.dta{rm}
 saved
 {p_end}
 
@@ -1224,11 +1173,6 @@ saved
 {res}{txt}
 {com}. save $my_workdir/das_activity_codes.dta, replace ;
 {txt}{p 0 4 2}
-(file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/das_activity_codes.dta{rm}
-not found)
-{p_end}
-{p 0 4 2}
 file {bf}
 C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/das_activity_codes.dta{rm}
 saved
@@ -1245,11 +1189,6 @@ saved
 {res}{txt}
 {com}. save $my_workdir/ams_activity_codes.dta, replace ;
 {txt}{p 0 4 2}
-(file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/ams_activity_codes.dta{rm}
-not found)
-{p_end}
-{p 0 4 2}
 file {bf}
 C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/ams_activity_codes.dta{rm}
 saved
@@ -1261,11 +1200,6 @@ saved
 {txt}
 {com}.   save $my_workdir/das2_activity_codes.dta, replace ;
 {txt}{p 0 4 2}
-(file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/das2_activity_codes.dta{rm}
-not found)
-{p_end}
-{p 0 4 2}
 file {bf}
 C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/das2_activity_codes.dta{rm}
 saved
@@ -1333,12 +1267,12 @@ saved
 {com}. save `das1_usage',replace;
 {txt}{p 0 4 2}
 (file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000002.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000002.tmp{rm}
 not found)
 {p_end}
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000002.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000002.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -1372,12 +1306,12 @@ as .dta format
 {com}. save `reg_use2006', replace;
 {txt}{p 0 4 2}
 (file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000007.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000007.tmp{rm}
 not found)
 {p_end}
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000007.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000007.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -1440,12 +1374,12 @@ as .dta format
 {com}. save `das2_usage', replace;
 {txt}{p 0 4 2}
 (file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000001.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000001.tmp{rm}
 not found)
 {p_end}
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000001.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000001.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -1469,7 +1403,7 @@ as .dta format
 {com}. compress;
   {txt}variable {bf}{res}permit{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}long{sf}
   {txt}variable {bf}{res}fishing_year{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
-{txt}  (1,214,990 bytes saved)
+{txt}  (1,216,260 bytes saved)
 
 {com}. notes: charge is denominated in days. There is one entry that is negative. I don't think it's a data error. ;
 {res}{txt}
@@ -1506,20 +1440,15 @@ as .dta format
   {txt}variable {bf}{res}fishing_year{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
   {txt}variable {bf}{res}permit_debited{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}long{sf}
   {txt}variable {bf}{res}right_id{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
-{txt}  (4,817,440 bytes saved)
+{txt}  (4,819,980 bytes saved)
 
 {com}. replace date_land=mdyhms(9,25,2008,15,21,0) if year(dofc(date_land))>=3008;
 {txt}(1 real change made)
 
 {com}. save $my_workdir/das_usage_$today_date_string.dta, replace ;
 {txt}{p 0 4 2}
-(file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/das_usage_2023_08_10.dta{rm}
-not found)
-{p_end}
-{p 0 4 2}
 file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/das_usage_2023_08_10.dta{rm}
+C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/das_usage_2023_08_16.dta{rm}
 saved
 {p_end}
 
@@ -1576,7 +1505,7 @@ saved
 {com}. save `dl1';
 {txt}{p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000008.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000008.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -1651,12 +1580,12 @@ as .dta format
 {com}. save `das2_leases', replace;
 {txt}{p 0 4 2}
 (file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000009.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000009.tmp{rm}
 not found)
 {p_end}
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000009.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000009.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -1722,13 +1651,8 @@ as .dta format
 
 {com}. save $my_workdir/leases_$today_date_string.dta, replace ;
 {txt}{p 0 4 2}
-(file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/leases_2023_08_10.dta{rm}
-not found)
-{p_end}
-{p 0 4 2}
 file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/leases_2023_08_10.dta{rm}
+C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/leases_2023_08_16.dta{rm}
 saved
 {p_end}
 
@@ -1762,7 +1686,7 @@ saved
 . save `das';
 {txt}{p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000001.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000001.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -1807,12 +1731,12 @@ as .dta format
 {com}. save `das2', replace;
 {txt}{p 0 4 2}
 (file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000002.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000002.tmp{rm}
 not found)
 {p_end}
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000002.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000002.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -1868,7 +1792,7 @@ as .dta format
 {com}. save `das2', replace;
 {txt}{p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000002.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000002.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -1887,13 +1811,8 @@ as .dta format
 {txt}
 {com}. save $my_workdir/das_allocations_$today_date_string.dta, replace ;
 {txt}{p 0 4 2}
-(file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/das_allocations_2023_08_10.dta{rm}
-not found)
-{p_end}
-{p 0 4 2}
 file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/das_allocations_2023_08_10.dta{rm}
+C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/das_allocations_2023_08_16.dta{rm}
 saved
 {p_end}
 
@@ -1922,13 +1841,8 @@ saved
 by Stata 11 or 12)
 {p_end}
 {p 0 4 2}
-(file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/carlos_ever_2023_08_10.dta{rm}
-not found)
-{p_end}
-{p 0 4 2}
 file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/carlos_ever_2023_08_10.dta{rm}
+C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/carlos_ever_2023_08_16.dta{rm}
 saved
 {p_end}
 
@@ -1949,13 +1863,8 @@ saved
 by Stata 11 or 12)
 {p_end}
 {p 0 4 2}
-(file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/carlos_owns_these_2023_08_10.dta{rm}
-not found)
-{p_end}
-{p 0 4 2}
 file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/carlos_owns_these_2023_08_10.dta{rm}
+C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/carlos_owns_these_2023_08_16.dta{rm}
 saved
 {p_end}
 
@@ -2014,12 +1923,12 @@ saved
 {com}. save `vaf', replace;
 {txt}{p 0 4 2}
 (file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000006.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000006.tmp{rm}
 not found)
 {p_end}
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000006.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000006.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -2049,11 +1958,6 @@ as .dta format
 
 {com}. save  $my_workdir/das2_activity_codes_augmented.dta, replace;
 {txt}{p 0 4 2}
-(file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/das2_activity_codes_augmented.dta{rm}
-not found)
-{p_end}
-{p 0 4 2}
 file {bf}
 C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/das2_activity_codes_augmented.dta{rm}
 saved
@@ -2084,12 +1988,12 @@ saved
 {com}. save `das1_usage',replace;
 {txt}{p 0 4 2}
 (file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000002.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000002.tmp{rm}
 not found)
 {p_end}
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000002.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000002.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -2126,12 +2030,12 @@ as .dta format
 {com}. save `reg_use2006', replace;
 {txt}{p 0 4 2}
 (file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000008.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000008.tmp{rm}
 not found)
 {p_end}
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000008.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000008.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -2197,12 +2101,12 @@ as .dta format
 {com}. save `das2_usage', replace;
 {txt}{p 0 4 2}
 (file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000001.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000001.tmp{rm}
 not found)
 {p_end}
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000001.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000001.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -2254,7 +2158,7 @@ as .dta format
 {com}. save `das2_usage', replace;
 {txt}{p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000001.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000001.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -2286,7 +2190,7 @@ as .dta format
   {txt}variable {bf}{res}ams_trip_id{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}long{sf}
   {txt}variable {bf}{res}permit{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}long{sf}
   {txt}variable {bf}{res}fishing_year{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
-{txt}  (2,186,982 bytes saved)
+{txt}  (2,189,268 bytes saved)
 
 {com}. notes: charge is denominated in days. There is one entry that is negative. I don't think it's a data error. ;
 {res}{txt}
@@ -2301,12 +2205,12 @@ as .dta format
 {com}.  save `ams', replace;
 {txt}{p 0 4 2}
 (file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000009.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000009.tmp{rm}
 not found)
 {p_end}
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000009.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000009.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -2314,7 +2218,7 @@ as .dta format
 {com}.  use $my_workdir/ams_activity_codes.dta, replace;
 {txt}
 {com}. keep if fmp=="MULT";
-{txt}(16,145 observations deleted)
+{txt}(25,336 observations deleted)
 
 {com}. keep activity_code activity_description charge_name das_category;
 {txt}
@@ -2325,7 +2229,7 @@ as .dta format
 {com}. save `ams_das2';
 {txt}{p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_00000a.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_00000a.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -2341,7 +2245,7 @@ as .dta format
 {col 5}Result{col 33}Number of obs
 {col 5}{hline 41}
 {col 5}Not matched{col 30}{res}               0
-{txt}{col 5}Matched{col 30}{res}         121,497{txt}  (_merge==3)
+{txt}{col 5}Matched{col 30}{res}         121,624{txt}  (_merge==3)
 {col 5}{hline 41}
 
 {com}. assert _merge==3;
@@ -2351,7 +2255,7 @@ as .dta format
 {com}. save `ams', replace;
 {txt}{p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000009.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000009.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -2471,16 +2375,16 @@ as .dta format
 {txt}(5,632 real changes made)
 
 {com}. replace charge_by_hand=charge_by_hand/24;
-{txt}(239,354 real changes made)
+{txt}(239,481 real changes made)
 
 {com}. replace fishing_hours=fishing_hours/24;
-{txt}(239,354 real changes made)
+{txt}(239,481 real changes made)
 
 {com}. rename fishing_hours fishing_days;
 {res}{txt}
 {com}. /*  in 2010 and after, DAS get charged in 24 hour increments for common pool vessels. Not exactly sure what is done for sector vessels, but whever*/
 > replace charge_by_hand=ceil(charge_by_hand) if date_sail>=clock("05/01/2010 00:00:00", "MDYhms") & schema=="AMS";
-{txt}(96,051 real changes made)
+{txt}(96,178 real changes made)
 
 {com}.  order fishing_days charge_by_hand external_charge, after(charge);
 {txt}
@@ -2494,7 +2398,7 @@ as .dta format
   {txt}variable {bf}{res}fishing_area{sf}{txt} was {bf}{res}str58{sf}{txt} now {bf}{res}str51{sf}
   {txt}variable {bf}{res}category_name{sf}{txt} was {bf}{res}str19{sf}{txt} now {bf}{res}str1{sf}
   {txt}variable {bf}{res}accounting_function{sf}{txt} was {bf}{res}str18{sf}{txt} now {bf}{res}str14{sf}
-{txt}  (14,839,948 bytes saved)
+{txt}  (14,847,822 bytes saved)
 
 {com}. rename das_trip_id das2_trip_id;
 {res}{txt}
@@ -2545,7 +2449,7 @@ as .dta format
 {com}. save $my_workdir/das_usage_$today_date_string.dta, replace;
 {txt}{p 0 4 2}
 file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/das_usage_2023_08_10.dta{rm}
+C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/das_usage_2023_08_16.dta{rm}
 saved
 {p_end}
 
@@ -2755,7 +2659,7 @@ saved
 {com}. save `das';
 {txt}{p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000001.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000001.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -2800,12 +2704,12 @@ as .dta format
 {com}. save `das2', replace;
 {txt}{p 0 4 2}
 (file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000002.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000002.tmp{rm}
 not found)
 {p_end}
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000002.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000002.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -2871,7 +2775,7 @@ as .dta format
 {com}. save `das2', replace;
 {txt}{p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000002.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000002.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -2914,12 +2818,12 @@ as .dta format
 {com}. save `e1', replace;
 {txt}{p 0 4 2}
 (file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000004.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000004.tmp{rm}
 not found)
 {p_end}
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000004.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000004.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -2949,7 +2853,7 @@ as .dta format
 {com}. save `e1', replace;
 {txt}{p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000004.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000004.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -2978,7 +2882,7 @@ as .dta format
   {txt}variable {bf}{res}per_num{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}long{sf}
   {txt}variable {bf}{res}right_id{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}long{sf}
   {txt}variable {bf}{res}auth_id{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}int{sf}
-{txt}  (73,612 bytes saved)
+{txt}  (73,626 bytes saved)
 
 {com}. sort right_id date_e date_c;
 {txt}
@@ -2986,7 +2890,7 @@ as .dta format
 {txt}(2,082 missing values generated)
 
 {com}. gen remark2=substr(remark,201,.);
-{txt}(5,149 missing values generated)
+{txt}(5,150 missing values generated)
 
 {com}. replace auth_type="CPH" if strmatch(auth_type,"HISTORY RETENTION");
 {txt}(155 real changes made)
@@ -3002,13 +2906,13 @@ as .dta format
 
 {txt}groups formed: {res}11
 
-{txt}total observations:{res} 5258
+{txt}total observations:{res} 5259
 {txt}  in duplicates    {res}   22
-{txt}  in unique        {res} 5236
+{txt}  in unique        {res} 5237
 
 {txt}(11 observations deleted)
 
-observations remaining: {res}5247
+observations remaining: {res}5248
 {txt}
 {com}. drop if right_id==1901 & dofc(date_eligible)==mdy(5,4,1994);
 {txt}(1 observation deleted)
@@ -3021,13 +2925,8 @@ observations remaining: {res}5247
 by Stata 11 or 12)
 {p_end}
 {p 0 4 2}
-(file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/mqrs_old_2023_08_10.dta{rm}
-not found)
-{p_end}
-{p 0 4 2}
 file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/mqrs_old_2023_08_10.dta{rm}
+C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/mqrs_old_2023_08_16.dta{rm}
 saved
 {p_end}
 
@@ -3041,13 +2940,13 @@ saved
 
 {txt}groups formed: {res}10
 
-{txt}total observations:{res} 5246
+{txt}total observations:{res} 5247
 {txt}  in duplicates    {res}   20
-{txt}  in unique        {res} 5226
+{txt}  in unique        {res} 5227
 
 {txt}(10 observations deleted)
 
-observations remaining: {res}5236
+observations remaining: {res}5237
 {txt}
 {com}. drop _expand;
 {txt}
@@ -3136,14 +3035,14 @@ observations remaining: {res}5236
   {txt}variable {bf}{res}a2021{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}byte{sf}
   {txt}variable {bf}{res}a2022{sf}{txt} was {bf}{res}double{sf}{txt} now {bf}{res}byte{sf}
   {txt}variable {bf}{res}type_auth{sf}{txt} was {bf}{res}str17{sf}{txt} now {bf}{res}str16{sf}
-{txt}  (849,408 bytes saved)
+{txt}  (849,576 bytes saved)
 
 {com}. reshape long a, i(per_num right_id type_auth) j(fishing_year);
 {txt}(j = 2000 2001 2002 2003 2004 2005 2006 2007 2008 2009 2010 2011 2012 2013 2014 2015 2016 2017 2018 2019 2020 2021 2022)
 
 Data{col 36}Wide{col 43}->{col 48}Long
 {hline 77}
-Number of observations     {res}       5,056   {txt}->   {res}116,288     
+Number of observations     {res}       5,057   {txt}->   {res}116,311     
 {txt}Number of variables        {res}          27   {txt}->   {res}6           
 {txt}j variable (23 values)                    ->   {res}fishing_year
 {txt}xij variables:
@@ -3156,7 +3055,7 @@ Number of observations     {res}       5,056   {txt}->   {res}116,288
 {txt}(0 real changes made)
 
 {com}. drop if a==0;
-{txt}(81,206 observations deleted)
+{txt}(81,229 observations deleted)
 
 {com}. drop a;
 {txt}
@@ -3211,13 +3110,8 @@ Number of observations     {res}       5,056   {txt}->   {res}116,288
 by Stata 11 or 12)
 {p_end}
 {p 0 4 2}
-(file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/mqrs_annual_2023_08_10.dta{rm}
-not found)
-{p_end}
-{p 0 4 2}
 file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/mqrs_annual_2023_08_10.dta{rm}
+C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/mqrs_annual_2023_08_16.dta{rm}
 saved
 {p_end}
 
@@ -3266,13 +3160,8 @@ saved
 by Stata 11 or 12)
 {p_end}
 {p 0 4 2}
-(file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/sector_participants_2023_08_10.dta{rm}
-not found)
-{p_end}
-{p 0 4 2}
 file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/sector_participants_2023_08_10.dta{rm}
+C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/sector_participants_2023_08_16.dta{rm}
 saved
 {p_end}
 
@@ -3348,13 +3237,8 @@ saved
 by Stata 11 or 12)
 {p_end}
 {p 0 4 2}
-(file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/psc_processed_2023_08_10.dta{rm}
-not found)
-{p_end}
-{p 0 4 2}
 file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/psc_processed_2023_08_10.dta{rm}
+C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/psc_processed_2023_08_16.dta{rm}
 saved
 {p_end}
 
@@ -3374,9 +3258,45 @@ saved
 {com}. /* Send this to character*/
 > 
 > quietly forvalues yr=$firstders/$lastyr{c -(};
+working on gearids in year 2009
+working on gearids in year 2010
+working on gearids in year 2011
+working on gearids in year 2012
+working on gearids in year 2013
+working on gearids in year 2014
+working on gearids in year 2015
+working on gearids in year 2016
+working on gearids in year 2017
+working on gearids in year 2018
+working on gearids in year 2019
+working on gearids in year 2020
+working on gearids in year 2021
+working on gearids in year 2022
 {txt}
-{com}. dsconcat `dsp1';
+{com}. clear;
 {txt}
+{com}. append using `dsp1';
+{txt}{p 0 7 2}
+(variable
+{bf:gearid} was {bf:long}, now {bf:double} to accommodate using data's values)
+{p_end}
+{p 0 7 2}
+(variable
+{bf:tripid} was {bf:long}, now {bf:double} to accommodate using data's values)
+{p_end}
+{p 0 7 2}
+(variable
+{bf:serial_num} was {bf:str8}, now {bf:str16} to accommodate using data's values)
+{p_end}
+{p 0 7 2}
+(variable
+{bf:gearqty} was {bf:int}, now {bf:long} to accommodate using data's values)
+{p_end}
+{p 0 7 2}
+(variable
+{bf:soakmin} was {bf:byte}, now {bf:int} to accommodate using data's values)
+{p_end}
+
 {com}.         renvarlab, lower;
 {txt}No renames necessary: all new names match old names
 
@@ -3386,44 +3306,71 @@ saved
 {txt}subtrip already numeric; no {res}replace
 {txt}serial_num: contains nonnumeric characters; no {res}replace
 {txt}gearcode: contains nonnumeric characters; no {res}replace
-{txt}mesh already numeric; no {res}replace
-{txt}gearqty already numeric; no {res}replace
+{txt}mesh: all characters numeric; {res}replaced {txt}as {res}double
+{txt}(71842 missing values generated)
+{res}{txt}gearqty already numeric; no {res}replace
 {txt}gearsize already numeric; no {res}replace
 {txt}nhaul already numeric; no {res}replace
 {txt}soakhrs already numeric; no {res}replace
 {txt}soakmin already numeric; no {res}replace
 {txt}soakhours already numeric; no {res}replace
 {txt}depth already numeric; no {res}replace
-{txt}carea already numeric; no {res}replace
-{txt}tenmsq already numeric; no {res}replace
-{txt}qdsq already numeric; no {res}replace
-{txt}latitude already numeric; no {res}replace
+{txt}carea: all characters numeric; {res}replaced {txt}as {res}int
+{txt}(8199 missing values generated)
+{res}{txt}tenmsq: all characters numeric; {res}replaced {txt}as {res}byte
+{txt}(57397 missing values generated)
+{res}{txt}qdsq: all characters numeric; {res}replaced {txt}as {res}long
+{txt}(57397 missing values generated)
+{res}{txt}latitude already numeric; no {res}replace
 {txt}longitude already numeric; no {res}replace
 {txt}dbyear already numeric; no {res}replace
 {txt}
 {com}.         compress;
   {txt}variable {bf}{res}dbyear{sf}{txt} was {bf}{res}float{sf}{txt} now {bf}{res}int{sf}
-{txt}  (5,649,044 bytes saved)
+{txt}  (2,504,402 bytes saved)
 
 {com}. compress;
 {txt}  (0 bytes saved)
 
 {com}. save $my_workdir/veslog_G$today_date_string.dta, replace ;
 {txt}{p 0 4 2}
-(file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/veslog_G2023_08_10.dta{rm}
-not found)
-{p_end}
-{p 0 4 2}
 file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/veslog_G2023_08_10.dta{rm}
+C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/veslog_G2023_08_16.dta{rm}
 saved
 {p_end}
 
 {com}. quietly forvalues yr=$firstders/$lastyr{c -(};
+working on catches in year 2009
+working on catches in year 2010
+working on catches in year 2011
+working on catches in year 2012
+working on catches in year 2013
+working on catches in year 2014
+working on catches in year 2015
+working on catches in year 2016
+working on catches in year 2017
+working on catches in year 2018
+working on catches in year 2019
+working on catches in year 2020
+working on catches in year 2021
+working on catches in year 2022
 {txt}
-{com}. dsconcat `dsp2';
+{com}. clear;
 {txt}
+{com}. append using `dsp2';
+{txt}{p 0 7 2}
+(variable
+{bf:catch_id} was {bf:long}, now {bf:double} to accommodate using data's values)
+{p_end}
+{p 0 7 2}
+(variable
+{bf:gearid} was {bf:long}, now {bf:double} to accommodate using data's values)
+{p_end}
+{p 0 7 2}
+(variable
+{bf:tripid} was {bf:long}, now {bf:double} to accommodate using data's values)
+{p_end}
+
 {com}.         renvarlab, lower;
 {txt}No renames necessary: all new names match old names
 
@@ -3442,20 +3389,15 @@ saved
 {txt}
 {com}.         compress;
   {txt}variable {bf}{res}dbyear{sf}{txt} was {bf}{res}float{sf}{txt} now {bf}{res}int{sf}
-{txt}  (16,262,470 bytes saved)
+{txt}  (7,409,818 bytes saved)
 
 {com}. compress;
 {txt}  (0 bytes saved)
 
 {com}. save $my_workdir/veslog_S$today_date_string.dta, replace ;
 {txt}{p 0 4 2}
-(file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/veslog_S2023_08_10.dta{rm}
-not found)
-{p_end}
-{p 0 4 2}
 file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/veslog_S2023_08_10.dta{rm}
+C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/veslog_S2023_08_16.dta{rm}
 saved
 {p_end}
 
@@ -3480,7 +3422,7 @@ saved
 {txt}
 {com}. dups, drop terse;
 
-{txt}group by:{res} tripid state1 portlnd1 geoid namelsad
+{txt}group by:{res} namelsad tripid state1 portlnd1 geoid
 
 {txt}groups formed: {res}872831
 
@@ -3499,27 +3441,99 @@ observations remaining: {res}1975137
 {com}. save `tports', replace;
 {txt}{p 0 4 2}
 (file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_00001j.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_00000t.tmp{rm}
 not found)
 {p_end}
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_00001j.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_00000t.tmp{rm}
 saved
 as .dta format
 {p_end}
 
-{com}. quietly forvalues yr=$firstders/$lastyr{c -(};
+{com}. /* this is a normal data pull for years up to and including 2017 */
+> quietly forvalues yr=$firstders/2017{c -(};
+working on trips in year 2009
+working on trips in year 2010
+working on trips in year 2011
+working on trips in year 2012
+working on trips in year 2013
+working on trips in year 2014
+working on trips in year 2015
+working on trips in year 2016
+working on trips in year 2017
 {txt}
-{com}. dsconcat `dsp3';
+{com}. clear;
 {txt}
-{com}.         renvarlab, lower;
+{com}. append using `dsp3';
+{txt}{p 0 7 2}
+(variable
+{bf:operator} was {bf:str25}, now {bf:str35} to accommodate using data's values)
+{p_end}
+{p 0 7 2}
+(variable
+{bf:raw_portlnd1} was {bf:str24}, now {bf:str25} to accommodate using data's values)
+{p_end}
+{p 0 7 2}
+(variable
+{bf:tripid} was {bf:long}, now {bf:double} to accommodate using data's values)
+{p_end}
+{p 0 7 2}
+(variable
+{bf:hullnum} was {bf:str8}, now {bf:str9} to accommodate using data's values)
+{p_end}
+
+{com}. tempfile tripids2017;
+{txt}
+{com}. save `tripids2017', replace;
+{txt}{p 0 4 2}
+(file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000015.tmp{rm}
+not found)
+{p_end}
+{p 0 4 2}
+file {bf}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000015.tmp{rm}
+saved
+as .dta format
+{p_end}
+
+{com}. /* this patches in 2018 to end .
+> The matching isn't perfect. there are some trips that are joining to two entries because date_canceled from one row is equal to date_issued on the second row and the date_sail is both of them.
+> 
+> When this happens, you keep the 2nd of those rows.
+>  */
+> 
+> quietly forvalues yr=2018/$lastyr{c -(};
+working on trips in year 2018
+working on trips in year 2019
+working on trips in year 2020
+working on trips in year 2021
+working on trips in year 2022
+{txt}
+{com}. clear;
+{txt}
+{com}. append using `dsp4';
+{txt}{p 0 7 2}
+(variable
+{bf:raw_portlnd1} was {bf:str18}, now {bf:str24} to accommodate using data's values)
+{p_end}
+{p 0 7 2}
+(variable
+{bf:operator} was {bf:str27}, now {bf:str30} to accommodate using data's values)
+{p_end}
+{p 0 7 2}
+(variable
+{bf:operator} was {bf:str30}, now {bf:str33} to accommodate using data's values)
+{p_end}
+
+{com}. renvarlab, lower;
 {txt}No renames necessary: all new names match old names
 
-{com}.         destring, replace       ;
+{com}. destring, replace;
 {txt}tripid already numeric; no {res}replace
 {txt}nsubtrip already numeric; no {res}replace
-{txt}hullnum: contains nonnumeric characters; no {res}replace
+{txt}hullnum already numeric; no {res}replace
 {txt}permit already numeric; no {res}replace
 {txt}datesail already numeric; no {res}replace
 {txt}tripcatg already numeric; no {res}replace
@@ -3529,16 +3543,44 @@ as .dta format
 {txt}opernum already numeric; no {res}replace
 {txt}raw_portlnd1: contains nonnumeric characters; no {res}replace
 {txt}raw_state1: contains nonnumeric characters; no {res}replace
+{txt}fixed_hull_id: contains nonnumeric characters; no {res}replace
+{txt}date_canceled already numeric; no {res}replace
 {txt}dbyear already numeric; no {res}replace
 {txt}
-{com}.         compress;
-  {txt}variable {bf}{res}dbyear{sf}{txt} was {bf}{res}float{sf}{txt} now {bf}{res}int{sf}
-{txt}  (5,468,530 bytes saved)
-
 {com}. compress;
-{txt}  (0 bytes saved)
+  {txt}variable {bf}{res}dbyear{sf}{txt} was {bf}{res}float{sf}{txt} now {bf}{res}int{sf}
+{txt}  (724,958 bytes saved)
 
-{com}. /*there's two trips that get filed into the wrong place */
+{com}. bysort tripid (date_canceled): keep if _n==_N;
+{txt}(835 observations deleted)
+
+{com}. bysort tripid: assert _n==1;
+{txt}
+{com}. drop hullnum;
+{txt}
+{com}. rename fixed_hull_id hullnum ;
+{res}{txt}
+{com}. drop date_canceled;
+{txt}
+{com}. append using `tripids2017';
+{txt}{p 0 7 2}
+(variable
+{bf:hullnum} was {bf:str8}, now {bf:str9} to accommodate using data's values)
+{p_end}
+{p 0 7 2}
+(variable
+{bf:operator} was {bf:str33}, now {bf:str35} to accommodate using data's values)
+{p_end}
+{p 0 7 2}
+(variable
+{bf:raw_portlnd1} was {bf:str24}, now {bf:str25} to accommodate using data's values)
+{p_end}
+{p 0 7 2}
+(variable
+{bf:dbyear} was {bf:int}, now {bf:float} to accommodate using data's values)
+{p_end}
+
+{com}.                                 /*there's two trips that get filed into the wrong place */
 > drop if tripid==4864477 & dbyear==2015;
 {txt}(1 observation deleted)
 
@@ -3559,28 +3601,57 @@ as .dta format
 {res}
 {txt}{col 5}Result{col 33}Number of obs
 {col 5}{hline 41}
-{col 5}Not matched{col 30}{res}         851,652
-{txt}{col 9}from master{col 30}{res}         851,652{txt}  (_merge==1)
+{col 5}Not matched{col 30}{res}          39,554
+{txt}{col 9}from master{col 30}{res}          39,554{txt}  (_merge==1)
 {col 9}from using{col 30}{res}               0{txt}  (_merge==2)
 
-{col 5}Matched{col 30}{res}       1,882,611{txt}  (_merge==3)
+{col 5}Matched{col 30}{res}       1,147,706{txt}  (_merge==3)
 {col 5}{hline 41}
 
-{com}. drop _merge;
-{txt}
 {com}. save $my_workdir/veslog_T$today_date_string.dta, replace ;
 {txt}{p 0 4 2}
-(file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/veslog_T2023_08_10.dta{rm}
-not found)
-{p_end}
-{p 0 4 2}
 file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/veslog_T2023_08_10.dta{rm}
+C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/veslog_T2023_08_16.dta{rm}
 saved
 {p_end}
 
-{com}. 
+{com}. /* Alternative way to patch in hullnum  .. 
+> use noaa.vessels and noaa.document. It's incredibly slow to pull data from GARFO.  Somehow it's also incredibly slow to pull data from vtr.document and vtr.vessels (NEFSC copy)
+> 
+> I thought patching in based on the vessel_id would be best, but there are some rows where the vessel id =0 and the permit number exists.
+> Therefore, it's better to use the permit num to match
+> 
+> odbc load,  exec("select d.vessel_id, d.docid as tripid, d.date_sail, v.hull_num as hullnum, v.start_date, v.end_date, v.permit_num as gar_permit from noaa.document@garfo_nefsc d 
+>     LEFT JOIN noaa.vessels@garfo_nefsc v on
+>     d.vessel_id=v.vessel_id AND d.date_sail>=v.start_date and (d.date_sail<=v.end_date OR v.end_date is null)
+>         where d.vessel_id <>0;") $oracle_cxn;
+>         renvarlab, lower;
+>         destring, replace;
+>         compress;
+> 
+>         
+>         
+>         
+> #delimit ;
+> clear;
+>         There are alot of missings here too. 
+> odbc load, exec("select d.vessel_permit_num, d.vessel_id, d.docid, d.date_sail, v.hull_num, v.start_date, v.end_date, v.permit_num from vtr.document d 
+>     LEFT JOIN vtr.vessels v on
+>     d.vessel_permit_num=v.permit_num AND d.date_sail>=v.start_date and (d.date_sail<=v.end_date OR v.end_date is null);") $oracle_cxn;
+>         rename docid tripid;
+>         drop vessel_id;
+>         /* there are plenty of missing hullnum here too, so maybe vessels isn't the best */
+> save $my_workdir/document_$today_date_string.dta, replace ;
+>         
+>         
+>         */
+>         
+>         
+>         
+>         
+>         
+>         
+
 {txt}end of do-file
 
 {com}. /* build the permit portfolios */
@@ -3620,7 +3691,7 @@ saved
 {txt}(224 missing values generated)
 
 {com}.     gen mycanc=dofc(date_canceled);
-{txt}(896,811 missing values generated)
+{txt}(896,810 missing values generated)
 
 {com}.     format my* %td;
 {txt}
@@ -3649,7 +3720,7 @@ by Stata 11 or 12)
 {p_end}
 {p 0 4 2}
 file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/vps_fishery_raw_2023_08_10.dta{rm}
+C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/vps_fishery_raw_2023_08_16.dta{rm}
 saved
 {p_end}
 
@@ -3902,7 +3973,7 @@ by Stata 11 or 12)
 {p_end}
 {p 0 4 2}
 file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/permit_working_2023_08_10.dta{rm}
+C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/permit_working_2023_08_16.dta{rm}
 saved
 {p_end}
 
@@ -3952,7 +4023,7 @@ saved
 {com}.     gen mys=dofc(date_issued);
 {txt}
 {com}.     gen myend=dofc(date_canceled);
-{txt}(6,776 missing values generated)
+{txt}(6,768 missing values generated)
 
 {com}. drop date_issued date_canceled;
 {txt}
@@ -3967,12 +4038,12 @@ saved
 {com}. save `permit_working', replace;
 {txt}{p 0 4 2}
 (file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000001.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000001.tmp{rm}
 not found)
 {p_end}
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000001.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000001.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -3996,7 +4067,7 @@ as .dta format
 (191,451 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000002.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000002.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -4005,7 +4076,7 @@ as .dta format
 (191,750 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000003.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000003.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -4014,7 +4085,7 @@ as .dta format
 (206,731 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000004.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000004.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -4023,7 +4094,7 @@ as .dta format
 (206,430 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000005.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000005.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -4032,7 +4103,7 @@ as .dta format
 (205,741 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000006.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000006.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -4041,7 +4112,7 @@ as .dta format
 (205,299 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000007.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000007.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -4050,7 +4121,7 @@ as .dta format
 (204,845 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000008.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000008.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -4059,7 +4130,7 @@ as .dta format
 (204,632 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_000009.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_000009.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -4068,7 +4139,7 @@ as .dta format
 (204,261 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_00000a.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_00000a.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -4077,7 +4148,7 @@ as .dta format
 (203,912 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_00000b.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_00000b.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -4086,7 +4157,7 @@ as .dta format
 (203,755 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_00000c.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_00000c.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -4095,7 +4166,7 @@ as .dta format
 (203,759 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_00000d.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_00000d.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -4104,7 +4175,7 @@ as .dta format
 (203,807 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_00000e.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_00000e.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -4113,7 +4184,7 @@ as .dta format
 (203,703 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_00000f.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_00000f.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -4122,7 +4193,7 @@ as .dta format
 (203,680 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_00000g.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_00000g.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -4131,7 +4202,7 @@ as .dta format
 (203,702 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_00000h.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_00000h.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -4140,7 +4211,7 @@ as .dta format
 (203,727 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_00000i.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_00000i.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -4149,7 +4220,7 @@ as .dta format
 (203,714 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_00000j.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_00000j.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -4158,7 +4229,7 @@ as .dta format
 (203,693 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_00000k.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_00000k.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -4167,7 +4238,7 @@ as .dta format
 (203,662 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_00000l.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_00000l.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -4176,7 +4247,7 @@ as .dta format
 (203,591 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_00000m.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_00000m.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -4185,7 +4256,7 @@ as .dta format
 (203,507 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_00000n.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_00000n.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -4194,7 +4265,7 @@ as .dta format
 (203,419 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_00000o.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_00000o.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -4203,7 +4274,7 @@ as .dta format
 (203,318 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_00000p.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_00000p.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -4212,7 +4283,7 @@ as .dta format
 (202,765 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_00000q.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_00000q.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -4221,7 +4292,7 @@ as .dta format
 (202,269 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_00000r.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_00000r.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -4230,7 +4301,7 @@ as .dta format
 (201,848 observations deleted)
 {p 0 4 2}
 file {bf}
-C:\Users\min-yang.lee\AppData\Local\Temp\ST_854_00000s.tmp{rm}
+C:\Users\min-yang.lee\AppData\Local\Temp\ST_3d98_00000s.tmp{rm}
 saved
 as .dta format
 {p_end}
@@ -4259,7 +4330,7 @@ by Stata 11 or 12)
 {p_end}
 {p 0 4 2}
 file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/permit_portfolio_2023_08_10.dta{rm}
+C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/permit_portfolio_2023_08_16.dta{rm}
 saved
 {p_end}
 
@@ -4272,7 +4343,7 @@ by Stata 11 or 12)
 {p_end}
 {p 0 4 2}
 file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/lobster_traps_2023_08_10.dta{rm}
+C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/lobster_traps_2023_08_16.dta{rm}
 saved
 {p_end}
 
@@ -4312,12 +4383,12 @@ by Stata 11 or 12)
 {p_end}
 {p 0 4 2}
 (file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/fishery_keyfile_2023_08_10.dta{rm}
+C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/fishery_keyfile_2023_08_16.dta{rm}
 not found)
 {p_end}
 {p 0 4 2}
 file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/fishery_keyfile_2023_08_10.dta{rm}
+C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/fishery_keyfile_2023_08_16.dta{rm}
 saved
 {p_end}
 
@@ -4354,12 +4425,12 @@ by Stata 11 or 12)
 {p_end}
 {p 0 4 2}
 (file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/species_keyfile_2023_08_10.dta{rm}
+C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/species_keyfile_2023_08_16.dta{rm}
 not found)
 {p_end}
 {p 0 4 2}
 file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/species_keyfile_2023_08_10.dta{rm}
+C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/species_keyfile_2023_08_16.dta{rm}
 saved
 {p_end}
 
@@ -4410,12 +4481,12 @@ by Stata 11 or 12)
 {p_end}
 {p 0 4 2}
 (file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/nespp4_keyfile_2023_08_10.dta{rm}
+C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/nespp4_keyfile_2023_08_16.dta{rm}
 not found)
 {p_end}
 {p 0 4 2}
 file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/nespp4_keyfile_2023_08_10.dta{rm}
+C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/nespp4_keyfile_2023_08_16.dta{rm}
 saved
 {p_end}
 
@@ -4467,12 +4538,12 @@ by Stata 11 or 12)
 {p_end}
 {p 0 4 2}
 (file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/vlspp_keyfile_2023_08_10.dta{rm}
+C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/vlspp_keyfile_2023_08_16.dta{rm}
 not found)
 {p_end}
 {p 0 4 2}
 file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/vlspp_keyfile_2023_08_10.dta{rm}
+C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/vlspp_keyfile_2023_08_16.dta{rm}
 saved
 {p_end}
 
@@ -4506,12 +4577,12 @@ by Stata 11 or 12)
 {p_end}
 {p 0 4 2}
 (file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/cfdbs_port_keyfile_2023_08_10.dta{rm}
+C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/cfdbs_port_keyfile_2023_08_16.dta{rm}
 not found)
 {p_end}
 {p 0 4 2}
 file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/cfdbs_port_keyfile_2023_08_10.dta{rm}
+C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/cfdbs_port_keyfile_2023_08_16.dta{rm}
 saved
 {p_end}
 
@@ -4538,12 +4609,12 @@ saved
 {com}. save $my_workdir/processed_trips_$today_date_string.dta, replace;
 {txt}{p 0 4 2}
 (file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/processed_trips_2023_08_10.dta{rm}
+C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/processed_trips_2023_08_16.dta{rm}
 not found)
 {p_end}
 {p 0 4 2}
 file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/processed_trips_2023_08_10.dta{rm}
+C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/processed_trips_2023_08_16.dta{rm}
 saved
 {p_end}
 
@@ -4572,12 +4643,12 @@ saved
 {com}. save $my_workdir/port_geoid_keyfile_$today_date_string.dta, replace;
 {txt}{p 0 4 2}
 (file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/port_geoid_keyfile_2023_08_10.dta{rm}
+C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/port_geoid_keyfile_2023_08_16.dta{rm}
 not found)
 {p_end}
 {p 0 4 2}
 file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/port_geoid_keyfile_2023_08_10.dta{rm}
+C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/port_geoid_keyfile_2023_08_16.dta{rm}
 saved
 {p_end}
 
@@ -4599,27 +4670,79 @@ saved
 {com}. rename raw_state1 state1;
 {res}{txt}
 {com}. merge m:1 state1 portlnd1 using "$my_workdir/port_geoid_keyfile_$today_date_string.dta", update;
+{res}{err}variable {bf}_merge{sf} already defined
+{txt}{search r(110), local:r(110);}
+
+end of do-file
+{search r(110), local:r(110);}
+
+end of do-file
+
+{search r(110), local:r(110);}
+
+{com}. 
+. doedit "final_geoid_clean.do"
+
+. tab _merge
+
+   {txt}Matching result from {c |}
+                  merge {c |}      Freq.     Percent        Cum.
+{hline 24}{c +}{hline 35}
+        Master only (1) {c |}{res}     39,554        3.33        3.33
+{txt}            Matched (3) {c |}{res}  1,147,706       96.67      100.00
+{txt}{hline 24}{c +}{hline 35}
+                  Total {c |}{res}  1,187,260      100.00
+
+{com}. browse if _merge==1
+
+. tab _merge dbyear
+
+ {txt}Matching result from {c |}                                                                          dbyear
+                merge {c |}      2009       2010       2011       2012       2013       2014       2015       2016       2017       2018       2019       2020       2021       2022 {c |}     Total
+{hline 22}{c +}{hline 154}{c +}{hline 10}
+      Master only (1) {c |}{res}     2,314      2,476      2,830      3,346      2,735      2,682      2,990      2,708      2,831      2,669      2,744      2,807      3,270      3,152 {txt}{c |}{res}    39,554 
+{txt}          Matched (3) {c |}{res}   105,354    101,960     96,174     93,171     83,361     80,787     76,670     83,367     79,861     77,078     75,995     68,113     67,502     58,313 {txt}{c |}{res} 1,147,706 
+{txt}{hline 22}{c +}{hline 154}{c +}{hline 10}
+                Total {c |}{res}   107,668    104,436     99,004     96,517     86,096     83,469     79,660     86,075     82,692     79,747     78,739     70,920     70,772     61,465 {txt}{c |}{res} 1,187,260 
+
+{com}. do "C:\Users\Min-Yang.Lee\Documents\READ-SSB-Lee-Counterfactual_Modeling_Data\stata_code\data_extraction_processing\extraction\final_geoid_clean.do"
+{txt}
+{com}. #delimit;
+{txt}delimiter now ;
+{com}. use $my_workdir/veslog_T$today_date_string.dta, replace ;
+{txt}
+{com}. cap drop _merge;
+{txt}
+{com}. rename portlnd1 portlnd1_clean;
+{res}{txt}
+{com}. rename state1 state1_clean;
+{res}{txt}
+{com}. rename raw_portlnd1 portlnd1;
+{res}{txt}
+{com}. rename raw_state1 state1;
+{res}{txt}
+{com}. merge m:1 state1 portlnd1 using "$my_workdir/port_geoid_keyfile_$today_date_string.dta", update;
 {res}
 {txt}{col 5}Result{col 33}Number of obs
 {col 5}{hline 41}
-{col 5}Not matched{col 30}{res}         143,998
-{txt}{col 9}from master{col 30}{res}         143,834{txt}  (_merge==1)
-{col 9}from using{col 30}{res}             164{txt}  (_merge==2)
+{col 5}Not matched{col 30}{res}          48,768
+{txt}{col 9}from master{col 30}{res}          48,560{txt}  (_merge==1)
+{col 9}from using{col 30}{res}             208{txt}  (_merge==2)
 
-{col 5}Matched{col 30}{res}       2,590,429
-{txt}{col 9}not updated{col 30}{res}       1,791,413{txt}  (_merge==3)
-{col 9}missing updated{col 30}{res}         797,875{txt}  (_merge==4)
-{col 9}nonmissing conflict{col 30}{res}           1,141{txt}  (_merge==5)
+{col 5}Matched{col 30}{res}       1,138,700
+{txt}{col 9}not updated{col 30}{res}       1,109,453{txt}  (_merge==3)
+{col 9}missing updated{col 30}{res}          29,079{txt}  (_merge==4)
+{col 9}nonmissing conflict{col 30}{res}             168{txt}  (_merge==5)
 {col 5}{hline 41}
 
 {com}. drop if _merge==2;
-{txt}(164 observations deleted)
+{txt}(208 observations deleted)
 
 {com}. replace portlnd1_clean=portlnd1 if _merge==4;
-{txt}(797,773 real changes made)
+{txt}(28,981 real changes made)
 
 {com}. replace state1_clean=state1 if _merge==4;
-{txt}(797,773 real changes made)
+{txt}(28,981 real changes made)
 
 {com}. drop portlnd1 state1;
 {txt}
@@ -4634,18 +4757,18 @@ saved
 {com}. save $my_workdir/veslog_T$today_date_string.dta, replace ;
 {txt}{p 0 4 2}
 file {bf}
-C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/veslog_T2023_08_10.dta{rm}
+C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/data_folder/main/veslog_T2023_08_16.dta{rm}
 saved
 {p_end}
 
 {com}. 
 {txt}end of do-file
 
-{com}. log close;
+{com}. log close
       {txt}name:  {res}<unnamed>
-       {txt}log:  {res}C:\Users\Min-Yang.Lee\Documents\READ-SSB-Lee-Counterfactual_Modeling_Data\stata_code\data_extraction_processing\extraction\AB_extraction.smcl
+       {txt}log:  {res}C:/Users/Min-Yang.Lee/Documents/READ-SSB-Lee-Counterfactual_Modeling_Data/results/AB_extraction.smcl
   {txt}log type:  {res}smcl
- {txt}closed on:  {res}10 Aug 2023, 10:43:07
+ {txt}closed on:  {res}16 Aug 2023, 16:27:51
 {txt}{.-}
 {smcl}
 {txt}{sf}{ul off}
