@@ -164,6 +164,65 @@ replace dbyear=2017 if tripid==4959274 & dbyear==2016;
 
 
 
+/* patch in some missing hullnums */
+
+replace hullnum="MS7121BT" if hullnum=="" & permit==153863 & dbyear==2022;
+replace hullnum="CT4968BA" if hullnum=="" & permit==149647 & dbyear==2012;
+
+replace hullnum="FL8292LR" if hullnum=="" & permit==152130 & dbyear==2016;
+replace hullnum="NH9355D" if hullnum=="" & permit==121083 & dbyear==2011;
+
+replace hullnum="MS8021BN" if hullnum=="" & permit==125913 & dbyear==2011;
+replace hullnum="MS2339KT" if hullnum=="" & permit==135646 & dbyear==2022;
+replace hullnum="626498" if hullnum=="" & permit==410286 & (dbyear==2016|dbyear==2017);
+replace hullnum="583241" if hullnum=="" & permit==310981 & (dbyear>=2009 &dbyear<=2013);
+replace hullnum="574357" if hullnum=="" & permit==210582 & (dbyear==2009 | dbyear==2022) ;
+replace hullnum="670073" if hullnum=="" & permit==211341 & (dbyear>=2010 &dbyear<=2012);
+replace hullnum="997970" if hullnum=="" & permit==234039 & (dbyear==2022);
+replace hullnum="MS5377BK" if hullnum=="" & permit==152526 & (dbyear==2022);
+replace hullnum="636063" if hullnum=="" & permit==250573 & (dbyear==2010 | dbyear==2009);
+replace hullnum="602780" if hullnum=="" & permit==212951 & (dbyear==2010 | dbyear==2009);
+replace hullnum="ME2115R" if hullnum=="" & permit==138712 & (dbyear==2013 | dbyear==2014);
+replace hullnum="1193900" if hullnum=="" & permit==242875 & (dbyear==2013 | dbyear==2014);
+replace hullnum="932914" if hullnum=="" & permit==212603 & (dbyear==2015);
+replace hullnum="909070" if hullnum=="" & permit==242449 & (dbyear==2015 | dbyear==2016);
+replace hullnum="509563" if hullnum=="" & permit==310155 & (dbyear==2013 | dbyear==2009);
+	
+replace hullnum="617640" if hullnum=="" & permit==251705 & (dbyear==2014);
+replace hullnum="1116023" if hullnum=="" & permit==233582 ;
+replace hullnum="584867" if hullnum=="" & permit==320326 ;
+replace hullnum="NY8828GJ" if hullnum=="" & permit==146737  & (dbyear==2016);
+replace hullnum="MS2892BE" if hullnum=="" & permit==149951  & (dbyear==2015);
+replace hullnum="ME10NTF" if hullnum=="" & permit==149360  & (dbyear==2010);
+
+replace hullnum="900103" if hullnum=="" & permit==231381  & (dbyear==2012);
+
+
+replace hullnum="1063404" if hullnum=="" & permit==242558  & (dbyear==2012);
+replace hullnum="548821" if hullnum=="" & permit==232260  & (dbyear==2010);
+replace hullnum="690278" if hullnum=="" & permit==320712  & (dbyear==2010);
+
+				
+ replace hullnum="226067" if hullnum=="" & permit==220045;
+ 
+ 
+ replace hullnum="226067" if hullnum=="" & permit==220045;
+ replace hullnum="273326" if hullnum=="" & permit==310175;
+ replace hullnum="1112031" if hullnum=="" & permit==242652;
+ 
+ 
+ replace hullnum="MS0013SK" if hullnum=="" & permit==138450;
+ replace hullnum="1278443" if hullnum=="" & permit==243043;
+ replace hullnum="625466" if hullnum=="" & permit==215127;
+ replace hullnum="CT4619BE" if hullnum=="" & permit==151203   & (dbyear>=2011 &dbyear<=2013);
+ replace hullnum="929551" if hullnum=="" & permit==232006 ;
+
+ replace hullnum="MS0013SK" if hullnum=="MS13SK";
+ 
+
+ 
+
+		
 merge 1:1 tripid using `tports', keep(1 3);
 save $my_workdir/veslog_T$today_date_string.dta, replace ;
 
