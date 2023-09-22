@@ -14,6 +14,7 @@ global results  "${my_projdir}/results";
 
 
 global spacepanels_data "C:/Users/Min-Yang.Lee/Documents/spacepanels/data_folder/main/veslog_species_huge_2023_08_09";
+global income_mobility "C:/Users/Min-Yang.Lee/Documents/incomemobility/data_folder/internal/nameclean";
 
 
 
@@ -30,11 +31,11 @@ global today_date_string = subinstr(trim("`date'"), " " , "_", .);
 global pass groundfish;
 
 
-global firstyr 2010;
+global firstyr 2009;
 global secondyr =$firstyr+1;
 
 global lastyr 2022;
-global firstders 1997;
+global firstders 2009;
 
 do "construct_owners.do";
 
@@ -81,9 +82,16 @@ do "permit_characteristics_extractions.do";
 do "fishery_key_file.do";
 do "port_key_file.do";
 
+do "dealer_key_file.do";
+
 
 do "processed_data_subset.do";
 do "final_geoid_clean.do";
+
+
+
+do "copyover_operator_data.do"
+
 
 
 log close;

@@ -1,7 +1,7 @@
 #delimit;
 
 use $my_workdir/veslog_T$today_date_string.dta, replace ;
-
+cap drop _merge;
 rename portlnd1 portlnd1_clean;
 rename state1 state1_clean;
 
