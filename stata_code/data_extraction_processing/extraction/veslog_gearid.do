@@ -91,7 +91,7 @@ quietly forvalues yr=$firstders/2017{;
 	local dsp3 `"`dsp3'"`tripids'" "'  ;
 	clear;
 	noisily display "working on trips in year `yr'" ;
-	odbc load,  exec("select t.tripid, t.nsubtrip, t.hullnum, t.permit, t.datesail, t.tripcatg, t.crew, t.datelnd1, t.operator, t.opernum, t.portlnd1 as raw_portlnd1, t.state1 as raw_state1 from vtr.veslog`yr't  t
+	odbc load,  exec("select t.tripid, t.nsubtrip, t.hullnum, t.permit, t.datesail, t.tripcatg, t.crew, t.datelnd1, t.portlnd1 as raw_portlnd1, t.state1 as raw_state1 from vtr.veslog`yr't  t
      where t.tripcatg in('1','4');") $oracle_cxn;
 	renvarlab, lower;
 	destring, replace;
@@ -119,7 +119,7 @@ quietly forvalues yr=2018/$lastyr{;
 	local dsp4 `"`dsp4'"`tripids2'" "'  ;
 	clear;
 	noisily display "working on trips in year `yr'" ;
-	odbc load,  exec("select t.tripid, t.nsubtrip, t.hullnum, t.permit, t.datesail, t.tripcatg, t.crew, t.datelnd1, t.operator, t.opernum, t.portlnd1 as raw_portlnd1, t.state1 as raw_state1, p.hull_id as fixed_hull_id, p.date_canceled from vtr.veslog`yr't  t
+	odbc load,  exec("select t.tripid, t.nsubtrip, t.hullnum, t.permit, t.datesail, t.tripcatg, t.crew, t.datelnd1, t.portlnd1 as raw_portlnd1, t.state1 as raw_state1, p.hull_id as fixed_hull_id, p.date_canceled from vtr.veslog`yr't  t
 	 left join permit.vps_vessel p 
      ON t.permit=p.vp_num and 
         trunc(t.datesail)>=trunc(p.date_issued) and 
@@ -221,8 +221,8 @@ replace hullnum="690278" if hullnum=="" & permit==320712  & (dbyear==2010);
  
 
  
-
-		
+cap drop operator;
+cap drop opernum;		
 merge 1:1 tripid using `tports', keep(1 3);
 save $my_workdir/veslog_T$today_date_string.dta, replace ;
 
