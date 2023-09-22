@@ -14,6 +14,7 @@ global results  "${my_projdir}/results";
 
 
 global spacepanels_data "C:/Users/Min-Yang.Lee/Documents/spacepanels/data_folder/main/veslog_species_huge_2023_08_09";
+global income_mobility "C:/Users/Min-Yang.Lee/Documents/incomemobility/data_folder/internal/nameclean";
 
 
 
@@ -86,6 +87,11 @@ do "dealer_key_file.do";
 
 do "processed_data_subset.do";
 do "final_geoid_clean.do";
+
+
+
+do "copyover_operator_data.do"
+
 
 
 log close;
