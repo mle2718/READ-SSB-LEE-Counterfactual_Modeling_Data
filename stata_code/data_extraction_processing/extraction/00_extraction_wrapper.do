@@ -31,11 +31,11 @@ global today_date_string = subinstr(trim("`date'"), " " , "_", .);
 global pass groundfish;
 
 
-global firstyr 2009;
+global firstyr 2004;
 global secondyr =$firstyr+1;
 
 global lastyr 2022;
-global firstders 2009;
+global firstders 2004;
 
 do "construct_owners.do";
 
