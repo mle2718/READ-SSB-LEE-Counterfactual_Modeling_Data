@@ -1,5 +1,8 @@
-use "/home/mlee/Documents/projects/scallop IFQ project/data folder/approved_leases_lp_2018_06_25.dta", clear
-global my_workdir "/home/mlee/Documents/projects/Birkenbach/data_folder"
+
+
+use "$data_main/approved_leases_lp_2018_06_25.dta", clear
+
+
 local date: display %td_CCYY_NN_DD date(c(current_date), "DMY")
 global today_date_string = subinstr(trim("`date'"), " " , "_", .)
 
@@ -40,7 +43,7 @@ gen price=value/quantity
 drop approval*
 
 order cal_month
-save "$my_workdir/scallop_IFQ_prices_$today_date_string.dta", replace 
+save "$data_main/scallop_IFQ_prices_$today_date_string.dta", replace 
 
 /*
 use "/home/mlee/Documents/projects/scallop IFQ project/data folder/approved_leases3_2016_08_08.dta", clear
