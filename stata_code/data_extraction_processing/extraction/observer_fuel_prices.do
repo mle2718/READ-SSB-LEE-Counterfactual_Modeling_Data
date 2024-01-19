@@ -7,8 +7,8 @@ pause on;
 clear;
 
 /* costs*/
-odbc load,  exec("select ob.datesail, ob.port, ob.fuelgal, ob.fuelprice, po.portnm, po.stateabb, po.county from obtrp@nova ob, port po where 
-year>=2004 and fuelprice is not null and po.port=ob.port;")  $oracle_cxn;
+odbc load,  exec("select ob.datesail, ob.port, ob.fuelgal, ob.fuelprice, po.portnm, po.stateabb, po.county from obtrp ob, port po where 
+year>=2004 and fuelprice is not null and po.port=ob.port;")  $myNEFSC_USERS_conn;
 
 drop if inlist(stateabb,"DE","MD","NC","NK", "VA");
 
@@ -21,4 +21,4 @@ gen monthly=mofd(datesail);
 
 collapse (mean) fuelprice, by(stateabb monthly);
 format monthly %tm;
-saveold "monthly_state_fuelprices_$today_date_string.dta", version(11) replace;
+saveold "${data_main}/monthly_state_fuelprices_$today_date_string.dta", version(11) replace;
