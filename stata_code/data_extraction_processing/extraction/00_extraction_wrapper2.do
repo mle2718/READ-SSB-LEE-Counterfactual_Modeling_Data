@@ -32,6 +32,7 @@ global secondyr =$firstyr+1;
 
 global lastyr 2022;
 global firstders 2004;
+do "${my_codedir}/cams_scallop_types.do";
 /*
 do "${my_codedir}/observer_fuel_prices.do";
 
