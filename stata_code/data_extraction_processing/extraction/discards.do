@@ -42,9 +42,16 @@ clear;
 odbc load,  exec("select a.*, rownum rnum 
   from (select trip_id, stock_id, round(discard,2) as discard from APSD.T_SSB_DISCARD@musky_noaa where discard>0) a;") $oracle_cxn;
 
+  
+  APSD_T_SSB_CATCH_CURRENT
+APSD_T_SSB_DISCARD_CURRENT
+APSD_T_SSB_TRIP_CURRENT
+  
   */
   
 clear;
-odbc load,  exec("select trip_id, stock_id, sum(discard) as discard from APSD.T_SSB_DISCARD_CURRENT@garfo_nefsc where DISCARD>0 group by trip_id, stock_id;") $mysole_conn;
-bysort trip_id stock_id: assert _N==1;
+odbc load,  exec("select D.permit, D.trip_id as dmis_trip_id, D.stock_id, sum(D.discard) as discard, T.docid as tripid from NEFSC_GARFO.APSD_T_SSB_DISCARD_CURRENT D, NEFSC_GARFO.APSD_T_SSB_TRIP_CURRENT T
+ where D.trip_id=T.trip_id  and D.DISCARD>0 
+  group by D.permit, D.trip_id, D.stock_id, T.docid;") $myNEFSC_USERS_conn;
+bysort dmis_trip_id stock_id: assert _N==1;
 save $data_main/dmis_discards_$vintage_string.dta, replace;
