@@ -5,6 +5,24 @@
 */
 
 
+/*
+Code to sleuth around 
+
+select * from nefsc_garfo.permit_vps_owner a where 
+a.ap_num in (
+select distinct ap_num from  nefsc_garfo.permit_vps_vessel ves
+where hull_id='MS7993BG' and ap_year=2016);
+
+
+select * from  nefsc_garfo.permit_vps_vessel ves
+where hull_id='MS7993BG' and ap_year=2016;
+
+select * from nefsc_garfo.permit_vps_owner
+
+*/
+
+
+
 
 /* PRELIMINARIES */
 /* Set up folders and oracle connection*/
@@ -31,9 +49,9 @@ Note2: There are some VP_NUM's that have revenue but no ownership information. T
 
 clear;
 odbc load,  exec("select distinct(b.person_id), b.business_name, c.business_id, a.vp_num, a.ap_year, ves.hull_id
-	from permit.vps_owner@garfo_nefsc c, client.bus_own@garfo_nefsc b, permit.vps_fishery_ner@garfo_nefsc a, permit.vps_vessel ves
-		where c.ap_num in (select max(ap_num) as ap_num from permit.vps_fishery_ner@garfo_nefsc where ap_year between $firstyr and $lastyr group by vp_num, ap_year)
-	 and c.business_id=b.business_id and a.ap_num=c.ap_num and a.ap_num=ves.ap_num;") $mysole_conn;
+	from nefsc_garfo.permit_vps_owner c, nefsc_garfo.client_bus_own b, nefsc_garfo.permit_vps_fishery_ner a, nefsc_garfo.permit_vps_vessel ves
+		where c.ap_num in (select max(ap_num) as ap_num from nefsc_garfo.permit_vps_fishery_ner where ap_year between $firstyr and $lastyr group by vp_num, ap_year)
+	 and c.business_id=b.business_id and a.ap_num=c.ap_num and a.ap_num=ves.ap_num;") $myNEFSC_USERS_conn;
 
 	 
 display "check1";
@@ -73,9 +91,9 @@ save "${my_workdir}/ownership2_${today_date_string}.dta", replace;
 
 #delimit; 
 clear;
-odbc load,  exec("select pids.*, ves.hull_id from permit.owner_history_pids pids, permit.vps_vessel ves
+odbc load,  exec("select pids.*, ves.hull_id from nefsc_garfo.permit_owner_history_pids pids, nefsc_garfo.permit_vps_vessel ves
      where  pids.ap_num in (select max(ap_num) as ap_num from permit.owner_history_pids group by permit, ap_year) 
-	 and pids.ap_num=ves.ap_num;") $mysole_conn;
+	 and pids.ap_num=ves.ap_num;") $myNEFSC_USERS_conn;
 destring , replace;
 drop if ap_year==.;
 drop if ap_year<=2003;
@@ -92,6 +110,6 @@ save "${my_workdir}/ownership1_${today_date_string}.dta", replace;
 
 clear;
 
-odbc load,  exec("select business_id, business_name, person_id, name_first, name_middle, name_last from client.bus_own@garfo_nefsc;") $mysole_conn;
+odbc load,  exec("select business_id, business_name, person_id, name_first, name_middle, name_last from nefsc_garfo.client_bus_own;") $myNEFSC_USERS_conn;
 destring, replace;
 save "${my_workdir}/names_${today_date_string}.dta", replace;
